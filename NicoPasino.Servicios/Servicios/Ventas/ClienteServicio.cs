@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 
 namespace NicoPasino.Servicios.Servicios.Ventas
 {
-    public class ClienteServicio : IServicioGenerico<Cliente, ClienteDto>
+    public class ClienteServicio : IServicioGenerico<Cliente, ClienteDto, ClienteDto>
     {
         private readonly IRepositorioGenericoVentas<Cliente> _repoG;
         public ClienteServicio(IRepositorioGenericoVentas<Cliente> repoG) {
@@ -18,7 +18,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         public async Task<IEnumerable<ClienteDto>> GetAll(bool activo) {
             var objsDb = await _repoG.ListarAsync(
             //filtro: m => m.Activo == activo
-            //, orden: q => q.OrderByDescending(m => m.FechaCreacion)
+            orden: q => q.OrderByDescending(m => m.FechaCreacion),
             incluir: "Venta"
             );
 

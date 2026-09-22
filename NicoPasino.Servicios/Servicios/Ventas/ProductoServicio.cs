@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 
 namespace NicoPasino.Servicios.Servicios.Ventas
 {
-    public class ProductoServicio : IServicioGenerico<Producto, ProductoDto>
+    public class ProductoServicio : IServicioGenerico<Producto, ProductoDto, ProductoDto>
     {
         private readonly IRepositorioGenericoVentas<Producto> _repoG;
         public ProductoServicio(IRepositorioGenericoVentas<Producto> repoG) {
@@ -116,6 +116,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             var objeto = obj.Adapt<Producto>();
 
             objeto.FechaCreacion = DateTime.UtcNow;
+            objeto.FechaModificacion = DateTime.UtcNow;
             objeto.Activo = true;
 
             // Asegurar que se use sólo la FK y evitar que EF intente insertar una nueva Categoria

@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 
 namespace NicoPasino.Servicios.Servicios.Ventas
 {
-    public class VentaServicio : IServicioGenerico<Venta, VentaDto>
+    public class VentaServicio : IServicioGenerico<Venta, VentaDto, VentaDetalleDto>
     {
         // TODO: usar uow?
         private readonly IRepositorioGenericoVentas<Venta> _repoG;
@@ -26,22 +26,22 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             _repoVpp = repoVpp ?? throw new ArgumentNullException(nameof(repoVpp));
         }
 
-        public async Task<IEnumerable<VentaDto>> GetAll(bool activo) {
+        public async Task<IEnumerable<VentaDetalleDto>> GetAll(bool activo) {
             var objsDb = await _repoG.ListarAsync(
                 //filtro: m => m.Activo == activo
                 orden: q => q.OrderByDescending(m => m.FechaVenta)
-                , incluir: "IdClienteNavigation,Ventaporproducto,Ventaporproducto.IdProductoNavigation"
+                , incluir: "IdClienteNavigation.Venta,Ventaporproducto,Ventaporproducto.IdProductoNavigation"
             );
 
             // si hay...
             if (objsDb != null && objsDb.Any()) {
-                var objsDto = objsDb.Adapt<IEnumerable<VentaDto>>();
+                var objsDto = objsDb.Adapt<IEnumerable<VentaDetalleDto>>();
                 return objsDto;
             }
-            else return Enumerable.Empty<VentaDto>();
+            else return Enumerable.Empty<VentaDetalleDto>();
         }
 
-        public async Task<IEnumerable<VentaDto>> GetAll(string campo, string? valor) {
+        public async Task<IEnumerable<VentaDetalleDto>> GetAll(string campo, string? valor) {
             if (string.IsNullOrWhiteSpace(campo)) throw new ArgumentException("Campo de búsqueda no válido.");
             campo = campo.Trim().ToLowerInvariant();
             valor = valor?.Trim();
@@ -88,27 +88,27 @@ namespace NicoPasino.Servicios.Servicios.Ventas
                     throw new DataException($"Campo de búsqueda '{campo}' no soportado. Campos soportados: numero, nombre(Cliente), otro(Detalle).");
             }
 
-            var objsDb = await _repoG.ListarAsync(filtro: filtro, incluir: "IdClienteNavigation,Ventaporproducto,Ventaporproducto.IdProductoNavigation", orden: orden);
+            var objsDb = await _repoG.ListarAsync(filtro: filtro, incluir: "IdClienteNavigation.Venta,Ventaporproducto,Ventaporproducto.IdProductoNavigation", orden: orden);
 
             if (objsDb != null && objsDb.Any()) {
-                var objsDto = objsDb.Adapt<IEnumerable<VentaDto>>();
+                var objsDto = objsDb.Adapt<IEnumerable<VentaDetalleDto>>();
                 return objsDto;
             }
-            else return Enumerable.Empty<VentaDto>();
+            else return Enumerable.Empty<VentaDetalleDto>();
         }
 
-        public async Task<VentaDto> GetById(int id) {
+        public async Task<VentaDetalleDto> GetById(int id) {
             if (id <= 0) throw new DataException("Numero de venta no válido"); // TODO: comprobar si existe Nro
             var objDb = await _repoG.GetAsync(
                 filtro: m => m.Id == id
-                , incluir: "IdClienteNavigation,Ventaporproducto,Ventaporproducto.IdProductoNavigation"
+                , incluir: "IdClienteNavigation.Venta,Ventaporproducto,Ventaporproducto.IdProductoNavigation"
             );
 
             if (objDb != null) {
-                var objDto = objDb.Adapt<VentaDto>();
+                var objDto = objDb.Adapt<VentaDetalleDto>();
                 return objDto;
             }
-            else return new VentaDto();
+            else return new VentaDetalleDto();
         }
 
         public async Task<bool> Create(VentaDto obj) {

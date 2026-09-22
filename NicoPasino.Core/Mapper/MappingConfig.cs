@@ -16,8 +16,14 @@ namespace NicoPasino.Core.Mapper
                 .Map(dest => dest.Cliente, src => src.IdClienteNavigation.Nombre)
                 .Map(dest => dest.Productos, src => src.Ventaporproducto);
 
+            TypeAdapterConfig<Venta, VentaDetalleDto>.NewConfig()
+                .Map(dest => dest.Cliente, src => src.IdClienteNavigation)
+                .Map(dest => dest.Productos, src => src.Ventaporproducto)
+                .Map(dest => dest.Total, src => src.Ventaporproducto.Sum(x => x.SubTotal));
+
             TypeAdapterConfig<Ventaporproducto, VentaporproductoDto>.NewConfig()
-                .Map(dest => dest.Producto, src => src.IdProductoNavigation.Nombre);
+                .Map(dest => dest.Producto, src => src.IdProductoNavigation.Nombre)
+                .Map(dest => dest.IdProductoPublico, src => src.IdProductoNavigation.IdPublica);
 
             TypeAdapterConfig<Cliente, ClienteDto>.NewConfig()
                 .Map(dest => dest.NroCompras, src => src.Venta.Count());

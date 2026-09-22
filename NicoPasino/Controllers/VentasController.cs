@@ -11,15 +11,15 @@ namespace NicoPasino.Controllers
     [EnableRateLimiting("general")]
     public partial class VentasController : ControllerBase
     {
-        private readonly IServicioGenerico<Producto, ProductoDto> _productoServicio;
-        private readonly IServicioGenerico<Venta, VentaDto> _ventaServicio;
-        private readonly IServicioGenerico<Cliente, ClienteDto> _clienteServicio;
-        private readonly IServicioGenerico<Categoria, CategoriaDto> _categoriaServicio;
+        private readonly IServicioGenerico<Producto, ProductoDto, ProductoDto> _productoServicio;
+        private readonly IServicioGenerico<Venta, VentaDto, VentaDetalleDto> _ventaServicio;
+        private readonly IServicioGenerico<Cliente, ClienteDto, ClienteDto> _clienteServicio;
+        private readonly IServicioGenerico<Categoria, CategoriaDto, CategoriaDto> _categoriaServicio;
 
-        public VentasController(IServicioGenerico<Producto, ProductoDto> pServicio,
-                                IServicioGenerico<Venta, VentaDto> vServicio,
-                                IServicioGenerico<Cliente, ClienteDto> clienteServicio,
-                                IServicioGenerico<Categoria, CategoriaDto> categoriaServicio) {
+        public VentasController(IServicioGenerico<Producto, ProductoDto, ProductoDto> pServicio,
+                                IServicioGenerico<Venta, VentaDto, VentaDetalleDto> vServicio,
+                                IServicioGenerico<Cliente, ClienteDto, ClienteDto> clienteServicio,
+                                IServicioGenerico<Categoria, CategoriaDto, CategoriaDto> categoriaServicio) {
             _productoServicio = pServicio;
             _ventaServicio = vServicio;
             _clienteServicio = clienteServicio;

@@ -6,7 +6,7 @@ using NicoPasino.Core.Modelos.Ventas;
 
 namespace NicoPasino.Servicios.Servicios.Ventas
 {
-    public class CategoriaServicio : IServicioGenerico<Categoria, CategoriaDto>
+    public class CategoriaServicio : IServicioGenerico<Categoria, CategoriaDto, CategoriaDto>
     {
         private readonly IRepositorioGenericoVentas<Categoria> _repoG;
         public CategoriaServicio(IRepositorioGenericoVentas<Categoria> repoG) {

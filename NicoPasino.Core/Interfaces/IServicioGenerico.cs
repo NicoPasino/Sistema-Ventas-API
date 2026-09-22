@@ -1,12 +1,12 @@
 ﻿namespace NicoPasino.Core.Interfaces
 {
-    public interface IServicioGenerico<T, TDto> where T : class where TDto : class
+    public interface IServicioGenerico<TEntity, TEntradaDto, TSalidaDto> where TEntity : class where TEntradaDto : class where TSalidaDto : class
     {
-        Task<IEnumerable<TDto>> GetAll(bool activo);
-        Task<IEnumerable<TDto>> GetAll(string campo, string? valor); // búsqueda por campo
-        Task<TDto> GetById(int id);
-        Task<bool> Create(TDto obj);
-        Task<bool> Update(TDto obj);
+        Task<IEnumerable<TSalidaDto>> GetAll(bool activo);
+        Task<IEnumerable<TSalidaDto>> GetAll(string campo, string? valor); // búsqueda por campo
+        Task<TSalidaDto> GetById(int id);
+        Task<bool> Create(TEntradaDto obj);
+        Task<bool> Update(TEntradaDto obj);
         Task<bool> Enable(int id, bool estado);
     }
 }

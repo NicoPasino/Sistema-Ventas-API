@@ -6,7 +6,7 @@ public partial class VentaporproductoDto
 {
     //public int IdVenta { get; set; }
 
-    //public int IdProducto { get; set; }
+    public int? IdProductoPublico { get; set; }
 
     [StringLength(255, ErrorMessage = "Máximo 255 carácteres.")]
     public string? Producto { get; set; }

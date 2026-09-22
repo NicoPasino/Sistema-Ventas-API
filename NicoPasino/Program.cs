@@ -18,7 +18,7 @@ namespace NicoPasino
 
             // Forzar a que escuche en todas las interfaces en el puerto 5000
             // para poder conectar dispositivos en la misma red (android)
-            builder.WebHost.UseUrls("http://0.0.0.0:5000");
+            //builder.WebHost.UseUrls("http://0.0.0.0:5000");
 
             DotEnv.Load(); // leer .env
 
@@ -44,10 +44,10 @@ namespace NicoPasino
             builder.Services.AddScoped(typeof(IRepositorioGenericoVentas<>), typeof(RepositorioGenericoVentas<>));
 
             // Servicios
-            builder.Services.AddScoped<IServicioGenerico<Producto, ProductoDto>, ProductoServicio>();
-            builder.Services.AddScoped<IServicioGenerico<Venta, VentaDto>, VentaServicio>();
-            builder.Services.AddScoped<IServicioGenerico<Cliente, ClienteDto>, ClienteServicio>();
-            builder.Services.AddScoped<IServicioGenerico<Categoria, CategoriaDto>, CategoriaServicio>();
+            builder.Services.AddScoped<IServicioGenerico<Producto, ProductoDto, ProductoDto>, ProductoServicio>();
+            builder.Services.AddScoped<IServicioGenerico<Venta, VentaDto, VentaDetalleDto>, VentaServicio>();
+            builder.Services.AddScoped<IServicioGenerico<Cliente, ClienteDto, ClienteDto>, ClienteServicio>();
+            builder.Services.AddScoped<IServicioGenerico<Categoria, CategoriaDto, CategoriaDto>, CategoriaServicio>();
 
             // cambiar texto de validacion de la vista
             builder.Services.AddRazorPages()

@@ -18,4 +18,6 @@ public partial class ClienteDto
     public int Documento { get; set; }
 
     public int? NroCompras { get; set; }
+
+    public DateTime? FechaCreacion { get; set; }
 }

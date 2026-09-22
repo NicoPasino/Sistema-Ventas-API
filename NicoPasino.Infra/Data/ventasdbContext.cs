@@ -62,6 +62,8 @@ public partial class ventasdbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(150)
                 .HasColumnName("nombre");
+            entity.Property(e => e.FechaCreacion).IsRequired()
+                .HasColumnName("fechaCreacion");
         });
 
         modelBuilder.Entity<Producto>(entity =>
@@ -79,11 +81,11 @@ public partial class ventasdbContext : DbContext
                 .HasColumnName("activo");
             entity.Property(e => e.Cantidad).HasColumnName("cantidad");
             entity.Property(e => e.Descripcion).HasColumnName("descripcion");
-            entity.Property(e => e.FechaCreacion)
+            entity.Property(e => e.FechaCreacion).IsRequired()
                 .HasMaxLength(6)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP(6)")
                 .HasColumnName("fechaCreacion");
-            entity.Property(e => e.FechaModificacion)
+            entity.Property(e => e.FechaModificacion).IsRequired()
                 .HasMaxLength(6)
                 .ValueGeneratedOnAddOrUpdate()
                 .HasColumnName("fechaModificacion");
@@ -114,8 +116,6 @@ public partial class ventasdbContext : DbContext
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Detalle).HasColumnName("detalle");
             entity.Property(e => e.FechaVenta)
-                .HasMaxLength(6)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)")
                 .HasColumnName("fechaVenta");
             entity.Property(e => e.IdCliente).HasColumnName("idCliente");
             entity.Property(e => e.Numero).HasColumnName("numero");

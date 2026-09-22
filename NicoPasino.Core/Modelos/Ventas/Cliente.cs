@@ -16,4 +16,7 @@ public partial class Cliente
     public int Documento { get; set; }
 
     public virtual ICollection<Venta> Venta { get; set; } = new List<Venta>();
+
+    public DateTime FechaCreacion { get; set; }
+
 }
