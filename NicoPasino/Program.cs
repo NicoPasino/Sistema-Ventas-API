@@ -45,6 +45,8 @@ namespace NicoPasino
 
             // Servicios
             builder.Services.AddScoped<IServicioGenerico<Producto, ProductoDto, ProductoDto>, ProductoServicio>();
+            builder.Services.AddScoped<ProductoServicio>();
+            builder.Services.AddScoped<ClienteServicio>();
             builder.Services.AddScoped<IServicioGenerico<Venta, VentaDto, VentaDetalleDto>, VentaServicio>();
             builder.Services.AddScoped<IServicioGenerico<Cliente, ClienteDto, ClienteDto>, ClienteServicio>();
             builder.Services.AddScoped<IServicioGenerico<Categoria, CategoriaDto, CategoriaDto>, CategoriaServicio>();

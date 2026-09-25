@@ -58,6 +58,13 @@ public partial class ventasdbContext : DbContext
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Correo).HasColumnName("correo");
             entity.Property(e => e.Documento).HasColumnName("documento");
+            entity.Property(e => e.Telefono)
+                .HasMaxLength(20)
+                .HasColumnName("telefono");
+            entity.Property(e => e.Activo)
+                .HasDefaultValueSql("b'1'")
+                .HasColumnType("bit(1)")
+                .HasColumnName("activo");
             entity.Property(e => e.Nombre)
                 .IsRequired()
                 .HasMaxLength(150)
@@ -81,13 +88,11 @@ public partial class ventasdbContext : DbContext
                 .HasColumnName("activo");
             entity.Property(e => e.Cantidad).HasColumnName("cantidad");
             entity.Property(e => e.Descripcion).HasColumnName("descripcion");
-            entity.Property(e => e.FechaCreacion).IsRequired()
-                .HasMaxLength(6)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)")
+            entity.Property(e => e.FechaCreacion)
+                .IsRequired()
                 .HasColumnName("fechaCreacion");
-            entity.Property(e => e.FechaModificacion).IsRequired()
-                .HasMaxLength(6)
-                .ValueGeneratedOnAddOrUpdate()
+            entity.Property(e => e.FechaModificacion)
+                .IsRequired()
                 .HasColumnName("fechaModificacion");
             entity.Property(e => e.IdCategoria).HasColumnName("idCategoria");
             entity.Property(e => e.IdPublica).HasColumnName("idPublica");
@@ -139,6 +144,10 @@ public partial class ventasdbContext : DbContext
             entity.Property(e => e.IdVenta).HasColumnName("idVenta");
             entity.Property(e => e.IdProducto).HasColumnName("idProducto");
             entity.Property(e => e.Cantidad).HasColumnName("cantidad");
+            entity.Property(e => e.NombreProducto)
+                .IsRequired()
+                .HasMaxLength(120)
+                .HasColumnName("nombreProducto");
             entity.Property(e => e.PrecioUnitario)
                 .HasPrecision(10, 2)
                 .HasColumnName("precioUnitario");

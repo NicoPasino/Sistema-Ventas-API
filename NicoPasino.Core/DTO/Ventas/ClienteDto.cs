@@ -17,6 +17,11 @@ public partial class ClienteDto
     [Range(10000000, 99999999, ErrorMessage = "El documento debe tener 8 dígitos.")]
     public int Documento { get; set; }
 
+    [StringLength(20, ErrorMessage = "El teléfono no puede tener más de 20 caracteres.")]
+    public string Telefono { get; set; }
+
+    public bool Activo { get; set; }
+
     public int? NroCompras { get; set; }
 
     public DateTime? FechaCreacion { get; set; }

@@ -13,6 +13,10 @@ public partial class Cliente
 
     public string Correo { get; set; }
 
+    public string Telefono { get; set; }
+
+    public bool Activo { get; set; }
+
     public int Documento { get; set; }
 
     public virtual ICollection<Venta> Venta { get; set; } = new List<Venta>();

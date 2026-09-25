@@ -59,7 +59,7 @@ namespace NicoPasino.Controllers
                 return BadRequest(new { message = ex.Message }); // 400
             }
             catch (Exception ex) {
-                return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
+                return new ObjectResult("Error de servidor: StatusCode 500. " /*+ ex.Message*/) { StatusCode = 500 };
             }
         }
 
@@ -77,6 +77,23 @@ namespace NicoPasino.Controllers
             }
             catch (Exception ex) {
                 return new ObjectResult("Error de servidor: StatusCode 500. " /*+ ex.Message*/) { StatusCode = 500 };
+            }
+        }
+
+        [HttpPatch("Productos/{idPublica}")]
+        public async Task<IActionResult> ActualizarProductoParcial(int idPublica, [FromBody] ProductoPatchDto objeto) {
+            try {
+                if (objeto == null) throw new DataException("Datos inválidos, por favor revisar.");
+
+                var ok = await _productoServicioConcreto.Patch(objeto, idPublica);
+                if (ok) return StatusCode(202, "Actualizado");
+                else throw new Exception();
+            }
+            catch (DataException ex) {
+                return BadRequest(new { message = ex.Message }); // 400
+            }
+            catch (Exception ex) {
+                return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
             }
         }
 

@@ -6,7 +6,7 @@ public partial class VentaporproductoDto
 {
     //public int IdVenta { get; set; }
 
-    public int? IdProductoPublico { get; set; }
+    //public int IdProducto { get; set; }
 
     [StringLength(255, ErrorMessage = "Máximo 255 carácteres.")]
     public string? Producto { get; set; }
@@ -17,7 +17,7 @@ public partial class VentaporproductoDto
     [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0.")]
     public decimal PrecioUnitario { get; set; }
 
-    [Range(0, double.MaxValue, ErrorMessage = "El subtotal no puede ser negativo.")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "El subtotal debe ser mayor a 0.")]
     public decimal SubTotal { get; set; }
 
     //public virtual Producto IdProductoNavigation { get; set; }

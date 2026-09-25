@@ -114,6 +114,8 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             }
 
             var objeto = obj.Adapt<Cliente>();
+            objeto.Activo = true;
+            objeto.Telefono = obj.Telefono;
             var res = await _repoG.Add(objeto);
 
             return (res != null);
@@ -160,8 +162,52 @@ namespace NicoPasino.Servicios.Servicios.Ventas
 
 
 
-        public Task<bool> Enable(int id, bool estado) {
-            throw new NotImplementedException();
+        public async Task<bool> Patch(ClientePatchDto obj, int documento) {
+            if (obj == null) throw new DataException("No se recibió ningún dato.");
+            if (documento < 10000000 || documento > 99999999) throw new DataException("Documento no válido.");
+
+            if (obj.Nombre == null
+                && obj.Correo == null
+                && obj.Telefono == null
+                && obj.Activo == null) throw new DataException("No se recibieron datos para actualizar.");
+
+            var objDb = await _repoG.GetAsync(filtro: c => c.Documento == documento);
+            if (objDb == null) throw new DataException("Cliente no encontrado.");
+
+            if (obj.Nombre != null) {
+                if (string.IsNullOrWhiteSpace(obj.Nombre) || obj.Nombre.Trim().Length < 4) throw new DataException("Nombre no válido.");
+                objDb.Nombre = obj.Nombre;
+            }
+            if (obj.Correo != null) {
+                obj.Correo = obj.Correo.Trim();
+                if (obj.Correo.Length < 5 || !new EmailAddressAttribute().IsValid(obj.Correo))
+                    throw new DataException("Correo no válido.");
+
+                var duplicados = await _repoG.ListarAsync(filtro: c =>
+                    c.Correo == obj.Correo && c.Id != objDb.Id);
+                if (duplicados.Any())
+                    throw new DataException($"Ya existe otro cliente con el correo '{obj.Correo}'.");
+
+                objDb.Correo = obj.Correo;
+            }
+            if (obj.Telefono != null) objDb.Telefono = obj.Telefono;
+            if (obj.Activo.HasValue) objDb.Activo = obj.Activo.Value;
+
+            var res = await _repoG.Update(objDb);
+            if (res > 0) return true;
+            else throw new UpdateException("No se pudo actualizar en la base de datos.");
+        }
+
+        public async Task<bool> Enable(int id, bool estado) {
+            if (id <= 0) throw new DataException("Documento no válido");
+            var objDb = await _repoG.GetAsync(filtro: m => m.Documento == id);
+
+            if (objDb != null) {
+                objDb.Activo = estado;
+                await _repoG.Update(objDb);
+                return true;
+            }
+            else throw new DataException("Documento no válido");
         }
 
         /*public async Task<bool> Enable(int id, bool estado) {

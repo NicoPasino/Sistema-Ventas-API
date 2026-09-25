@@ -160,6 +160,37 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             else throw new UpdateException("No pudo actualizar en la base de datos.");
         }
 
+        public async Task<bool> Patch(ProductoPatchDto obj, int idPublica) {
+            if (obj == null) throw new DataException("No se recibió ningún dato.");
+            if (idPublica <= 0) throw new DataException("No se recibió ningún ID.");
+
+            if (obj.Nombre == null
+                && obj.Descripcion == null
+                && obj.Cantidad == null
+                && obj.Precio == null
+                && obj.IdCategoria == null
+                && obj.Activo == null) throw new DataException("No se recibieron datos para actualizar.");
+
+            var objDb = await _repoG.GetAsync(filtro: x => x.IdPublica == idPublica);
+            if (objDb == null) throw new DataException("Producto no encontrado.");
+
+            if (obj.Nombre != null) objDb.Nombre = obj.Nombre;
+            if (obj.Descripcion != null) objDb.Descripcion = obj.Descripcion;
+            if (obj.Cantidad.HasValue) objDb.Cantidad = obj.Cantidad.Value;
+            if (obj.Precio.HasValue) objDb.Precio = obj.Precio.Value;
+            if (obj.IdCategoria.HasValue) {
+                objDb.IdCategoria = obj.IdCategoria.Value;
+                objDb.IdCategoriaNavigation = null;
+            }
+            if (obj.Activo.HasValue) objDb.Activo = obj.Activo.Value;
+
+            objDb.FechaModificacion = DateTime.UtcNow;
+
+            var res = await _repoG.Update(objDb);
+            if (res > 0) return true;
+            else throw new UpdateException("No pudo actualizar en la base de datos.");
+        }
+
         public async Task<bool> Enable(int id, bool estado) {
             if (id <= 0) throw new DataException("Id no válido");
             var objDb = await _repoG.GetAsync(filtro: m => m.IdPublica == id);

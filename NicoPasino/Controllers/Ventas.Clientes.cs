@@ -77,6 +77,24 @@ namespace NicoPasino.Controllers
             }
         }
 
+        [HttpPatch("Clientes/{id}")]
+        public async Task<IActionResult> ActualizarClienteParcial(int id, [FromBody] ClientePatchDto objeto) {
+            //await Task.Delay(3000);
+            try {
+                if (objeto == null) throw new DataException("Datos inválidos, por favor revisar.");
+
+                var ok = await _clienteServicioConcreto.Patch(objeto, id);
+                if (ok) return Ok(new { success = true });
+                else throw new Exception();
+            }
+            catch (DataException ex) {
+                return BadRequest(new { message = ex.Message }); // 400
+            }
+            catch (Exception ex) {
+                return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
+            }
+        }
+
         [HttpDelete("Clientes/{id}")]
         public async Task<IActionResult> EliminarCliente(int id) {
             try {

@@ -179,6 +179,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
                 {
                     IdVenta = ventaGuardada.Id,
                     IdProducto = producto.Id,
+                    NombreProducto = producto.Nombre,
                     Cantidad = cantidad,
                     PrecioUnitario = producto.Precio,
                     SubTotal = producto.Precio * cantidad
