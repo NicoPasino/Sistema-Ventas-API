@@ -27,6 +27,12 @@ public partial class Producto
 
     public bool Activo { get; set; }
 
+    public int? StockMinimo { get; set; }
+
+    public int? StockMaximo { get; set; }
+
+    public string Proveedor { get; set; }
+
     public virtual Categoria IdCategoriaNavigation { get; set; }
 
     public virtual ICollection<Ventaporproducto> Ventaporproducto { get; set; } = new List<Ventaporproducto>();

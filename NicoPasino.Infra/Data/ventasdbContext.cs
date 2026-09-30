@@ -103,6 +103,11 @@ public partial class ventasdbContext : DbContext
             entity.Property(e => e.Precio)
                 .HasPrecision(10, 2)
                 .HasColumnName("precio");
+            entity.Property(e => e.Proveedor)
+                .HasMaxLength(150)
+                .HasColumnName("proveedor");
+            entity.Property(e => e.StockMaximo).HasColumnName("stockMaximo");
+            entity.Property(e => e.StockMinimo).HasColumnName("stockMinimo");
 
             entity.HasOne(d => d.IdCategoriaNavigation).WithMany(p => p.Producto)
                 .HasForeignKey(d => d.IdCategoria)

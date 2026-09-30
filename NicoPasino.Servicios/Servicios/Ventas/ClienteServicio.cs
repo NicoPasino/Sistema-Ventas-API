@@ -3,7 +3,7 @@ using NicoPasino.Core.DTO.Ventas;
 using NicoPasino.Core.Errores;
 using NicoPasino.Core.Interfaces;
 using NicoPasino.Core.Modelos.Ventas;
-using System.ComponentModel.DataAnnotations;
+using NicoPasino.Servicios.Validaciones;
 using System.Linq.Expressions;
 
 namespace NicoPasino.Servicios.Servicios.Ventas
@@ -11,8 +11,12 @@ namespace NicoPasino.Servicios.Servicios.Ventas
     public class ClienteServicio : IServicioGenerico<Cliente, ClienteDto, ClienteDto>
     {
         private readonly IRepositorioGenericoVentas<Cliente> _repoG;
-        public ClienteServicio(IRepositorioGenericoVentas<Cliente> repoG) {
+        private readonly ClienteValidador _validador;
+
+        public ClienteServicio(IRepositorioGenericoVentas<Cliente> repoG,
+                               ClienteValidador validador) {
             _repoG = repoG ?? throw new ArgumentNullException(nameof(repoG));
+            _validador = validador ?? throw new ArgumentNullException(nameof(validador));
         }
 
         public async Task<IEnumerable<ClienteDto>> GetAll(bool activo) {
@@ -92,7 +96,8 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         }
 
         public async Task<ClienteDto> GetById(int dni) {
-            if (dni <= 9999999 || dni > 999999999) throw new DataException("Documento no válido.");
+            _validador.ValidarDocumento(dni);
+
             var objDb = await _repoG.GetAsync(filtro: m => m.Documento == dni, incluir: "Venta");
 
             if (objDb != null) {
@@ -103,18 +108,12 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         }
 
         public async Task<bool> Create(ClienteDto obj) {
-            ValidarDatos(obj);
-
-            var existente = await _repoG.GetAsync(filtro: c => c.Documento == obj.Documento || c.Correo == obj.Correo);
-            if (existente != null) {
-                if (existente.Documento == obj.Documento)
-                    throw new DataException($"Ya existe un cliente con el DNI '{obj.Documento}'.");
-                if (existente.Correo == obj.Correo)
-                    throw new DataException($"Ya existe un cliente con el correo '{obj.Correo}'.");
-            }
+            _validador.NormalizarYValidar(obj);
+            await _validador.ValidarDuplicadosAsync(obj);
 
             var objeto = obj.Adapt<Cliente>();
             objeto.Activo = true;
+            objeto.FechaCreacion = DateTime.UtcNow;
             objeto.Telefono = obj.Telefono;
             var res = await _repoG.Add(objeto);
 
@@ -122,25 +121,20 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         }
 
         public async Task<bool> Update(ClienteDto obj) {
-            ValidarDatos(obj);
+            _validador.NormalizarYValidar(obj);
 
             // obtener obj original
             var objDb = await _repoG.GetAsync(filtro: x => x.Documento == obj.Documento, incluir: "Venta");
             if (objDb == null) throw new DataException("Objeto original no encontrado.");
 
-            // verificar duplicados excluyendo el registro actual
-            var duplicados = await _repoG.ListarAsync(filtro: c =>
-                (c.Documento == obj.Documento || c.Correo == obj.Correo) && c.Id != objDb.Id);
-            var dup = duplicados.FirstOrDefault();
-            if (dup != null) {
-                if (dup.Documento == obj.Documento)
-                    throw new DataException($"Ya existe otro cliente con el DNI '{obj.Documento}'.");
-                if (dup.Correo == obj.Correo)
-                    throw new DataException($"Ya existe otro cliente con el correo '{obj.Correo}'.");
-            }
+            await _validador.ValidarDuplicadosAsync(obj, objDb.Id);
 
             // mapear
             var objeto = obj.Adapt<Cliente>();
+
+            // conservar datos que no llegan en el dto
+            objeto.Id = objDb.Id;
+            objeto.FechaCreacion = objDb.FechaCreacion;
 
             // subir
             var res = await _repoG.Update(objeto);
@@ -148,46 +142,16 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             else throw new UpdateException("No se pudo actualizar en la base de datos.");
         }
 
-
-        private void ValidarDatos(ClienteDto obj) {
-            if (obj == null) throw new DataException("No se recibió ningún dato.");
-            if (obj.Documento < 10000000 || obj.Documento > 99999999) throw new DataException("Documento no válido.");
-            if (string.IsNullOrWhiteSpace(obj.Nombre) || obj.Nombre.Trim().Length < 4) throw new DataException("Nombre no válido.");
-            if (string.IsNullOrWhiteSpace(obj.Correo) || obj.Correo.Trim().Length < 5)
-                throw new DataException("Correo no válido.");
-            if (!new EmailAddressAttribute().IsValid(obj.Correo.Trim()))
-                throw new DataException("Correo no válido.");
-        }
-
-
-
-
         public async Task<bool> Patch(ClientePatchDto obj, int documento) {
-            if (obj == null) throw new DataException("No se recibió ningún dato.");
-            if (documento < 10000000 || documento > 99999999) throw new DataException("Documento no válido.");
-
-            if (obj.Nombre == null
-                && obj.Correo == null
-                && obj.Telefono == null
-                && obj.Activo == null) throw new DataException("No se recibieron datos para actualizar.");
+            _validador.NormalizarYValidarPatch(obj);
+            _validador.ValidarDocumento(documento);
 
             var objDb = await _repoG.GetAsync(filtro: c => c.Documento == documento);
             if (objDb == null) throw new DataException("Cliente no encontrado.");
 
-            if (obj.Nombre != null) {
-                if (string.IsNullOrWhiteSpace(obj.Nombre) || obj.Nombre.Trim().Length < 4) throw new DataException("Nombre no válido.");
-                objDb.Nombre = obj.Nombre;
-            }
+            if (obj.Nombre != null) objDb.Nombre = obj.Nombre;
             if (obj.Correo != null) {
-                obj.Correo = obj.Correo.Trim();
-                if (obj.Correo.Length < 5 || !new EmailAddressAttribute().IsValid(obj.Correo))
-                    throw new DataException("Correo no válido.");
-
-                var duplicados = await _repoG.ListarAsync(filtro: c =>
-                    c.Correo == obj.Correo && c.Id != objDb.Id);
-                if (duplicados.Any())
-                    throw new DataException($"Ya existe otro cliente con el correo '{obj.Correo}'.");
-
+                await _validador.ValidarCorreoUnicoAsync(obj.Correo, objDb.Id);
                 objDb.Correo = obj.Correo;
             }
             if (obj.Telefono != null) objDb.Telefono = obj.Telefono;
@@ -199,7 +163,8 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         }
 
         public async Task<bool> Enable(int id, bool estado) {
-            if (id <= 0) throw new DataException("Documento no válido");
+            _validador.ValidarDocumento(id);
+
             var objDb = await _repoG.GetAsync(filtro: m => m.Documento == id);
 
             if (objDb != null) {

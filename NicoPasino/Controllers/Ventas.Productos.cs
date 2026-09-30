@@ -130,8 +130,8 @@ namespace NicoPasino.Controllers
         [HttpGet("Categorias/{id}")]
         public async Task<ActionResult> GetCategoria(int id) {
             try {
-                var obj = await _productoServicio.GetById(id);
-                if (obj?.IdPublica != null) return Ok(obj);
+                var obj = await _categoriaServicio.GetById(id);
+                if (obj?.Id > 0) return Ok(obj);
                 else return NotFound(new { message = "Categoría no encontrada" }); // 404
             }
             catch (DataException ex) {

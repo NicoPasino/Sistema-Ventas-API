@@ -7,6 +7,7 @@ using NicoPasino.Core.Modelos.Ventas;
 using NicoPasino.Infra.Data;
 using NicoPasino.Infra.Repositorio;
 using NicoPasino.Servicios.Servicios.Ventas;
+using NicoPasino.Servicios.Validaciones;
 using System.Threading.RateLimiting;
 
 namespace NicoPasino
@@ -15,10 +16,6 @@ namespace NicoPasino
     {
         public static void Main(string[] args) {
             var builder = WebApplication.CreateBuilder(args);
-
-            // Forzar a que escuche en todas las interfaces en el puerto 5000
-            // para poder conectar dispositivos en la misma red (android)
-            //builder.WebHost.UseUrls("http://0.0.0.0:5000");
 
             DotEnv.Load(); // leer .env
 
@@ -45,6 +42,9 @@ namespace NicoPasino
 
             // Servicios
             builder.Services.AddScoped<IServicioGenerico<Producto, ProductoDto, ProductoDto>, ProductoServicio>();
+            builder.Services.AddScoped<ProductoValidador>();
+            builder.Services.AddScoped<ClienteValidador>();
+            builder.Services.AddScoped<VentaValidador>();
             builder.Services.AddScoped<ProductoServicio>();
             builder.Services.AddScoped<ClienteServicio>();
             builder.Services.AddScoped<IServicioGenerico<Venta, VentaDto, VentaDetalleDto>, VentaServicio>();
@@ -84,7 +84,7 @@ namespace NicoPasino
 
             // crear una base de datos desde de una migracion
             /*using (var scope = app.Services.CreateScope()) {
-                var context = scope.ServiceProvider.GetRequiredService<moviesdbContext>();
+                var context = scope.ServiceProvider.GetRequiredService<ventasdbContext>();
                 context.Database.Migrate();
             }*/
 

@@ -21,8 +21,17 @@ namespace NicoPasino.Core.DTO.Ventas
         [Range(0, int.MaxValue, ErrorMessage = "La cantidad no puede ser negativa.")]
         public int Cantidad { get; set; }
 
-        [Range(0, double.MaxValue, ErrorMessage = "El precio no puede ser negativo.")]
+        [Range(0, 99999999.99, ErrorMessage = "El precio no puede ser negativo ni superar 99.999.999,99.")]
         public decimal Precio { get; set; }
+
+        [Range(0, int.MaxValue, ErrorMessage = "El stock mínimo no puede ser negativo.")]
+        public int? StockMinimo { get; set; }
+
+        [Range(0, int.MaxValue, ErrorMessage = "El stock máximo no puede ser negativo.")]
+        public int? StockMaximo { get; set; }
+
+        [StringLength(150, ErrorMessage = "El proveedor no puede tener más de 150 caracteres.")]
+        public string? Proveedor { get; set; }
 
         public DateTime? FechaCreacion { get; set; }
 

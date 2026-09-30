@@ -3,6 +3,7 @@ using NicoPasino.Core.DTO.Ventas;
 using NicoPasino.Core.Errores;
 using NicoPasino.Core.Interfaces;
 using NicoPasino.Core.Modelos.Ventas;
+using NicoPasino.Servicios.Validaciones;
 using System.Linq.Expressions;
 
 namespace NicoPasino.Servicios.Servicios.Ventas
@@ -14,16 +15,19 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         private readonly IRepositorioGenericoVentas<Cliente> _repoCliente;
         private readonly IRepositorioGenericoVentas<Producto> _repoProducto;
         private readonly IRepositorioGenericoVentas<Ventaporproducto> _repoVpp;
+        private readonly VentaValidador _validador;
 
         public VentaServicio(
             IRepositorioGenericoVentas<Venta> repoG,
             IRepositorioGenericoVentas<Cliente> repoCliente,
             IRepositorioGenericoVentas<Producto> repoProducto,
-            IRepositorioGenericoVentas<Ventaporproducto> repoVpp) {
+            IRepositorioGenericoVentas<Ventaporproducto> repoVpp,
+            VentaValidador validador) {
             _repoG = repoG ?? throw new ArgumentNullException(nameof(repoG));
             _repoCliente = repoCliente ?? throw new ArgumentNullException(nameof(repoCliente));
             _repoProducto = repoProducto ?? throw new ArgumentNullException(nameof(repoProducto));
             _repoVpp = repoVpp ?? throw new ArgumentNullException(nameof(repoVpp));
+            _validador = validador ?? throw new ArgumentNullException(nameof(validador));
         }
 
         public async Task<IEnumerable<VentaDetalleDto>> GetAll(bool activo) {
@@ -98,7 +102,8 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         }
 
         public async Task<VentaDetalleDto> GetById(int id) {
-            if (id <= 0) throw new DataException("Numero de venta no válido"); // TODO: comprobar si existe Nro
+            _validador.ValidarIdOperacion(id);
+
             var objDb = await _repoG.GetAsync(
                 filtro: m => m.Id == id
                 , incluir: "IdClienteNavigation.Venta,Ventaporproducto,Ventaporproducto.IdProductoNavigation"
@@ -113,49 +118,15 @@ namespace NicoPasino.Servicios.Servicios.Ventas
 
         public async Task<bool> Create(VentaDto obj) {
             Random random = new();
-            if (obj == null) throw new DataException("No se recibió ningún dato.");
+            _validador.NormalizarYValidar(obj);
 
-            // Verificar Cliente
-            if (obj.DNI != null) {
-                var cliente = await _repoCliente.GetAsync(filtro: c => c.Documento == obj.DNI);
-                if (cliente != null) {
-                    obj.IdCliente = cliente.Id;
-                }
-                else {
-                    throw new DataException($"El cliente con el DNI '{obj.DNI}' No existe.");
-                }
-            }
-            else throw new DataException("No se recibió el DNI del cliente.");
+            // Verificar Cliente (los ítems referencian IdCliente, no el DNI)
+            obj.IdCliente = await _validador.ValidarClienteAsync(obj.DNI);
 
-            // Verificar productos
-            List<Producto> productosValidados;
-            int[] ids;
-            int[] cants;
-
-            if (obj.ItemsId != null && obj.ItemsCant != null) {
-                if (obj.ItemsId.ToArray().Length != obj.ItemsCant.ToArray().Length)
-                    throw new DataException("La lista de productos no coincide con la lista de cantidades.");
-
-                ids = obj.ItemsId.ToArray();
-                cants = obj.ItemsCant.ToArray();
-                productosValidados = new List<Producto>(ids.Length);
-
-                for (int i = 0; i < ids.Length; i++) {
-                    var idPublica = ids[i];
-                    var cantidad = cants[i];
-
-                    var productoDb = await _repoProducto.GetAsync(filtro: p => p.IdPublica == idPublica);
-                    if (productoDb == null)
-                        throw new DataException($"Producto no encontrado (código del producto: {idPublica}).");
-
-                    if (cantidad > productoDb.Cantidad)
-                        throw new DataException(
-                            $"Stock insuficiente para '{productoDb.Nombre}', cantidad solicitada: '{cantidad}', disponible: '{productoDb.Cantidad}'.");
-
-                    productosValidados.Add(productoDb);
-                }
-            }
-            else throw new DataException("No se recibió la lista de productos.");
+            // Verificar productos (existencia, estado y stock)
+            var ids = obj.ItemsId!.ToArray();
+            var cants = obj.ItemsCant!.ToArray();
+            var productosValidados = await _validador.ValidarProductosAsync(ids, cants);
 
             // Mapear a Venta manualmente para evitar conflictos de tipos
             var venta = new Venta
@@ -199,12 +170,41 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             return true;
         }
 
-        public Task<bool> Update(VentaDto obj) {
-            throw new NotImplementedException();
+        public async Task<bool> Update(VentaDto obj) {
+            if (obj == null) throw new DataException("No se recibió ningún dato.");
+            if (!obj.Id.HasValue || obj.Id.Value <= 0) throw new DataException("Numero de venta no válido");
+
+            // los ítems y el cliente no son editables: obligar a rehacer la venta
+            if (obj.ItemsId != null || obj.ItemsCant != null)
+                throw new DataException("No se pueden modificar los productos de una venta existente.");
+
+            if (obj.Detalle != null) {
+                obj.Detalle = obj.Detalle.Trim();
+                _validador.ValidarDetalle(obj.Detalle);
+                obj.Detalle = string.IsNullOrEmpty(obj.Detalle) ? null : obj.Detalle;
+            }
+            _validador.ValidarFecha(obj.FechaVenta);
+
+            var objDb = await _repoG.GetAsync(filtro: m => m.Id == obj.Id.Value);
+            if (objDb == null) throw new DataException("Venta no encontrada.");
+
+            if (obj.Detalle == objDb.Detalle
+                && (obj.FechaVenta == null || obj.FechaVenta == objDb.FechaVenta)) {
+                return true; // sin cambios, no tocar la BD
+            }
+
+            if (obj.Detalle != null) objDb.Detalle = obj.Detalle;
+            if (obj.FechaVenta.HasValue) objDb.FechaVenta = obj.FechaVenta;
+
+            var res = await _repoG.Update(objDb);
+            if (res > 0) return true;
+            else throw new UpdateException("No se pudo actualizar en la base de datos.");
         }
 
         public Task<bool> Enable(int id, bool estado) {
-            throw new NotImplementedException();
+            // La tabla 'venta' no tiene columna 'activo' (baja lógica no modelada).
+            // Habilitarlo requiere agregar la propiedad y una migración.
+            throw new NotImplementedException("La baja de ventas no está implementada: la tabla 'venta' no tiene columna 'activo'.");
         }
     }
 }
