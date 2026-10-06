@@ -75,6 +75,13 @@ public sealed class RepositorioGenericoVentasFake<T> : IRepositorioGenericoVenta
     /// </summary>
     public Func<Expression<Func<T, bool>>?, T?>? AlGetAsync { get; set; }
 
+    /// <summary>
+    /// Igual que <see cref="AlGetAsync"/> pero para <see cref="ListarAsync"/>. Permite
+    /// simular que la consulta falla (por ejemplo, para verificar como el servicio
+    /// envuelve las excepciones).
+    /// </summary>
+    public Func<IEnumerable<T>>? AlListarAsync { get; set; }
+
     /// <summary>Si se asigna, <see cref="Add"/> devuelve lo que retorne este delegate.</summary>
     public Func<T, T?>? AlAdd { get; set; }
 
@@ -101,6 +108,7 @@ public sealed class RepositorioGenericoVentasFake<T> : IRepositorioGenericoVenta
         UltimoFiltro = null;
         UltimoOrden = null;
         AlGetAsync = null;
+        AlListarAsync = null;
         AlAdd = null;
         ResultadoUpdate = 1;
         ResultadosUpdate.Clear();
@@ -148,11 +156,14 @@ public sealed class RepositorioGenericoVentasFake<T> : IRepositorioGenericoVenta
 
         var resultado = ResultadosUpdate.Count > 0 ? ResultadosUpdate.Dequeue() : ResultadoUpdate;
 
-        // La entidad real de EF queda trackeada: se actualizan sus valores,
-        // que es lo que hace el SaveChanges() de la implementacion de verdad.
-        var almacenada = BuscarEnAlmacen(ClaveDe(entity));
-        if (almacenada != null && !ReferenceEquals(almacenada, entity))
-            CopiarValores(entity, almacenada);
+        // La entidad real de EF queda trackeada: se actualizan sus valores, que es
+        // lo que hace el SaveChanges() de la implementacion de verdad. Si
+        // SaveChanges no afecta ninguna fila, asi que no se escribe nada.
+        if (resultado > 0) {
+            var almacenada = BuscarEnAlmacen(ClaveDe(entity));
+            if (almacenada != null && !ReferenceEquals(almacenada, entity))
+                CopiarValores(entity, almacenada);
+        }
 
         return Task.FromResult(resultado);
     }
@@ -220,6 +231,9 @@ public sealed class RepositorioGenericoVentasFake<T> : IRepositorioGenericoVenta
         UltimoFiltro = filtro;
         UltimoOrden = orden;
         UltimoInclude = incluir;
+
+        if (AlListarAsync != null)
+            return Task.FromResult(AlListarAsync());
 
         IQueryable<T> query = _entidades.AsQueryable();
         if (filtro != null) query = query.Where(filtro);

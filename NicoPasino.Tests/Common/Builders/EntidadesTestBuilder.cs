@@ -46,6 +46,7 @@ public sealed class ClienteBuilder
     public ClienteBuilder ConDocumento(int documento) { _documento = documento; return this; }
     public ClienteBuilder ConTelefono(string? telefono) { _telefono = telefono; return this; }
     public ClienteBuilder ConActivo(bool activo) { _activo = activo; return this; }
+    public ClienteBuilder ConFechaCreacion(DateTime fechaCreacion) { _fechaCreacion = fechaCreacion; return this; }
 
     /// <summary>Cablea la coleccion de ventas, que <c>MappingConfig</c> cuenta para <c>NroCompras</c>.</summary>
     public ClienteBuilder ConCompras(params Venta[] ventas)
@@ -90,17 +91,37 @@ public sealed class ProductoBuilder
     private string? _proveedor = "Distribuidora Central";
     private DateTime? _fechaCreacion = new(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private DateTime? _fechaModificacion = new(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-    private Categoria _categoria = new CategoriaBuilder().Build();
+    private Categoria? _categoria = new CategoriaBuilder().Build();
 
     public static ProductoBuilder Uno() => new();
 
     public ProductoBuilder ConId(int id) { _id = id; return this; }
     public ProductoBuilder ConIdPublica(int? idPublica) { _idPublica = idPublica; return this; }
     public ProductoBuilder ConNombre(string nombre) { _nombre = nombre; return this; }
+    public ProductoBuilder ConDescripcion(string? descripcion) { _descripcion = descripcion; return this; }
     public ProductoBuilder ConCantidad(int cantidad) { _cantidad = cantidad; return this; }
     public ProductoBuilder ConPrecio(decimal precio) { _precio = precio; return this; }
     public ProductoBuilder ConActivo(bool activo) { _activo = activo; return this; }
+    public ProductoBuilder ConStockMinimo(int? stockMinimo) { _stockMinimo = stockMinimo; return this; }
+    public ProductoBuilder ConStockMaximo(int? stockMaximo) { _stockMaximo = stockMaximo; return this; }
+    public ProductoBuilder ConProveedor(string? proveedor) { _proveedor = proveedor; return this; }
+    public ProductoBuilder ConFechaModificacion(DateTime? fecha) { _fechaModificacion = fecha; return this; }
     public ProductoBuilder ConCategoria(Categoria categoria) { _categoria = categoria; return this; }
+
+    /// <summary>
+    /// Producto con la FK de categoria puesta y la navegacion en <c>null</c>: es el
+    /// estado que queda despues de un <c>Create</c> o un <c>Update</c> de
+    /// <c>ProductoServicio</c>, que las ponen en null a proposito para que EF no
+    /// intente insertar una categoria nueva.
+    /// </summary>
+    public ProductoBuilder ConIdCategoriaHuerfano(int idCategoria)
+    {
+        _idCategoria = idCategoria;
+        _categoria = null;
+        return this;
+    }
+
+    private int? _idCategoria;
 
     /// <summary>
     /// <c>MappingConfig</c> linea 12 hace <c>src.IdCategoriaNavigation.Nombre</c>
@@ -109,7 +130,7 @@ public sealed class ProductoBuilder
     public Producto Build() => new() {
         Id = _id,
         IdPublica = _idPublica,
-        IdCategoria = _categoria.Id,
+        IdCategoria = _idCategoria ?? _categoria!.Id,
         IdCategoriaNavigation = _categoria,
         Nombre = _nombre,
         Descripcion = _descripcion!,
@@ -138,6 +159,7 @@ public sealed class VentaBuilder
 
     public VentaBuilder ConId(int id) { _id = id; return this; }
     public VentaBuilder ConNumero(int? numero) { _numero = numero; return this; }
+    public VentaBuilder ConDetalle(string? detalle) { _detalle = detalle; return this; }
     public VentaBuilder ConFechaVenta(DateTime? fecha) { _fechaVenta = fecha; return this; }
     public VentaBuilder ConCliente(Cliente cliente) { _cliente = cliente; _idCliente = cliente.Id; return this; }
 
@@ -188,6 +210,18 @@ public sealed class VentaporproductoBuilder
     }
 
     public VentaporproductoBuilder ConCantidad(int cantidad) { _cantidad = cantidad; return this; }
+
+    /// <summary>
+    /// Fija el precio unitario y, opcionalmente, el nombre del producto. El
+    /// <c>SubTotal</c> se recalcula como precio x cantidad, igual que hace
+    /// <c>VentaServicio.Create</c>.
+    /// </summary>
+    public VentaporproductoBuilder ConPrecioUnitario(decimal precio, string? nombre = null)
+    {
+        _precioUnitario = precio;
+        if (nombre != null) _nombreProducto = nombre;
+        return this;
+    }
 
     public Ventaporproducto Build()
     {

@@ -57,6 +57,17 @@ FrontEnd Repo: [Sistema-Ventas](https://github.com/NicoPasino/sistema-ventas)
     |     |     └─ EntidadesTestBuilder.cs
     |     └─ InicializadorMapster.cs
     ├─── Infraestructura
+    ├─── Servicios
+    │     ├─ ProductoServicioLecturaTests.cs        (GetAll, GetById, busqueda)
+    │     ├─ ProductoServicioCreateTests.cs         (Create, IdPublica unico)
+    │     ├─ ProductoServicioUpdateTests.cs         (Update)
+    │     ├─ ProductoServicioPatchEnableTests.cs    (Patch, Enable)
+    │     ├─ ClienteServicioLecturaTests.cs
+    │     ├─ ClienteServicioEscrituraTests.cs       (Create, Update, Patch, Enable)
+    │     ├─ VentaServicioLecturaTests.cs
+    │     ├─ VentaServicioCreateTests.cs
+    │     ├─ VentaServicioUpdateEnableTests.cs
+    │     └─ ServiciosConstructorTests.cs           (guardas de null)
     └─── Validadores
 ```
 
