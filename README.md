@@ -7,6 +7,7 @@ FrontEnd Repo: [Sistema-Ventas](https://github.com/NicoPasino/sistema-ventas)
 - Frameworks: `Entity Framework`, `ASP.NET`.
 - Base de datos: `MySql`.
 - Estructura: `The Clean Architecture`.
+- Tests: `xUnit`, `FluentAssertions`, `NSubstitute`, `coverlet`.
 
 
 ## 📦 Estructura principal del proyecto
@@ -37,11 +38,26 @@ FrontEnd Repo: [Sistema-Ventas](https://github.com/NicoPasino/sistema-ventas)
 │   └─── Repositorio
 |
 └───NicoPasino.Servicios #(Lógica de Negocio)
-    └─── Servicios
-          ├─ CategoriaServicio.cs
-          ├─ ClienteServicio.cs
-          ├─ ProductoServicio.cs
-          └─ VentaServicio.cs
+    ├─── Servicios
+    |     ├─ CategoriaServicio.cs
+    |     ├─ ClienteServicio.cs
+    |     ├─ ProductoServicio.cs
+    |     └─ VentaServicio.cs
+    └─── Validaciones
+          ├─ ProductoValidador.cs
+          ├─ ClienteValidador.cs
+          └─ VentaValidador.cs
+
+└───NicoPasino.Tests #(Tests unitarios)
+    ├─── Common
+    |     ├─ Fakes
+    |     |     └─ RepositorioGenericoVentasFake.cs
+    |     ├─ Builders
+    |     |     ├─ DtoTestBuilder.cs
+    |     |     └─ EntidadesTestBuilder.cs
+    |     └─ InicializadorMapster.cs
+    ├─── Infraestructura
+    └─── Validadores
 ```
 
 ## 📦 Endpoints
@@ -70,6 +86,41 @@ FrontEnd Repo: [Sistema-Ventas](https://github.com/NicoPasino/sistema-ventas)
     ├─── (PUT)            Modifica una venta
     └─── (DELETE /[id])   Elimina una venta
 ```
+
+## 🧪 Tests
+
+Los tests unitarios viven en `NicoPasino.Tests` y usan **xUnit** + **FluentAssertions**.
+No levantan base de datos ni el servidor web: los repositorios se reemplazan por un
+fake in-memory que evalúa los filtros y el orden con LINQ to Objects.
+
+```bash
+# Correr toda la suite
+dotnet test
+
+# Con reporte de cobertura (formato cobertura, en XML)
+dotnet test --settings .runsettings --collect:"XPlat Code Coverage"
+
+# Filtrar por nombre
+dotnet test --filter "FullyQualifiedName~ProductoValidador"
+```
+
+El reporte HTML de cobertura se genera con `reportgenerator` sobre el XML de coverlet.
+
+### Cómo escribir un test
+
+| Qué necesitás | Usá |
+|---|---|
+| Una entidad válida de arranque | `Common/Builders/EntidadesTestBuilder.cs` (`ProductoBuilder`, `ClienteBuilder`, …) |
+| Un DTO de entrada válido | `Common/Builders/DtoTestBuilder.cs` |
+| Reemplazar `IRepositorioGenericoVentas<T>` | `Common/Fakes/RepositorioGenericoVentasFake.cs` |
+
+El fake registra las llamadas (`VecesUpdate`, `UltimaEntidadActualizada`, `UltimoOrden`,
+…) para poder afirmar *qué* le pidió el servicio al repositorio, y evalúa de verdad el
+`Expression<Func<T, bool>>` de los filtros.
+
+`MappingConfig.VentasMappings()` se carga una sola vez por ensamblado desde
+`Common/InicializadorMapster.cs`, porque `TypeAdapterConfig` es estado estático global
+y en producción se inicializa en `Program.Main`.
 
 ## 🧑‍💻 Autor:
 Nicolás Pasino - nico_pasino@hotmail.com

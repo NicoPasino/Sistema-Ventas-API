@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>NicoPasino.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <!-- Corchetes: fijan el major para que una actualizacion noSalta a una major incompatible -->
+    <PackageReference Include="xunit" Version="[2.9.3]" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="[3.1.0]">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Cobertura con: dotnet test (ver .runsettings en la raiz) -->
+    <PackageReference Include="coverlet.collector" Version="[6.0.4]">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- FluentAssertions 7.x es la ultima version bajo licencia Apache 2.0.
+         La 8+ es proprietaria de Xceed (gratis solo para uso no comercial), por eso el [7.2.0]. -->
+    <PackageReference Include="FluentAssertions" Version="[7.2.0]" />
+    <!-- Solo para los tests de controller, donde hace falta simular las interfaces IServicioGenerico -->
+    <PackageReference Include="NSubstitute" Version="[5.3.0]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NicoPasino.Core\NicoPasino.Core.csproj" />
+    <ProjectReference Include="..\NicoPasino.Infra\NicoPasino.Infra.csproj" />
+    <ProjectReference Include="..\NicoPasino.Servicios\NicoPasino.Servicios.csproj" />
+    <ProjectReference Include="..\NicoPasino\NicoPasino.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
