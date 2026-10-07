@@ -1,0 +1,42 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - Solo-Sistema-Ventas-API
+      - master
+      - Tests-Unitarios
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar
+        uses: actions/checkout@v4
+
+      - name: Dotnet 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restaurar
+        run: dotnet restore SistemaVentas.sln
+
+      - name: Compilar
+        run: dotnet build SistemaVentas.sln --no-restore --configuration Release
+
+      - name: Testear con cobertura
+        run: dotnet test SistemaVentas.sln --no-build --configuration Release --settings .runsettings --collect:"XPlat Code Coverage" --logger trx
+
+      - name: Subir reportes (TRX + cobertura)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: |
+            **/TestResults/**
+            **/*.trx
+          if-no-files-found: warn
+          retention-days: 30

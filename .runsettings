@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+
+  <!--
+    Configuracion de ejecucion y cobertura de los tests unitarios.
+    Se usa pasandole este archivo con la opcion "settings" de "dotnet test".
+    El reporte queda en: NicoPasino.Tests/TestResults/coverage/
+  -->
+
+  <RunConfiguration>
+    <TargetFrameworkVersion>net9.0</TargetFrameworkVersion>
+    <TargetPlatform>x64</TargetPlatform>
+    <TestSessionTimeout>300000</TestSessionTimeout>
+    <DisableAppDomain>false</DisableAppDomain>
+    <!-- xUnit ejecuta en paralelo las clases de test de un mismo ensamblado.
+         Cada test crea sus propios fakes, asi que no comparten estado mutable.
+         Lo unico global es TypeAdapterConfig de Mapster, que se carga una sola
+         vez en el ModuleInitializer. -->
+    <DisableParallelization>false</DisableParallelization>
+  </RunConfiguration>
+
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+
+          <!-- Los 3 proyectos con logica de negocio. El proyecto web (NicoPasino)
+               se cubre aparte, con tests de controller e integracion. -->
+          <Include>[NicoPasino.Servicios]*</Include>
+          <Include>[NicoPasino.Core]*</Include>
+          <Include>[NicoPasino.Infra]*</Include>
+
+          <!-- Migraciones y DbContext generados por EF Power Tools: no son codigo
+               de negocio y hundirian el promedio. -->
+          <ExcludeByFile>**/obj/**/*.cs</ExcludeByFile>
+          <ExcludeByFile>**/Migrations/*.cs</ExcludeByFile>
+          <ExcludeByFile>**/*Designer.cs</ExcludeByFile>
+          <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
+          <SkipAutoProps>true</SkipAutoProps>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+
+</RunSettings>

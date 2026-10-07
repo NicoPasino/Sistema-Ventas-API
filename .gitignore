@@ -147,6 +147,11 @@ coverage*.json
 coverage*.xml
 coverage*.info
 
+# Reportes de cobertura generados por Coverlet (formato cobertura)
+coverage/
+TestResults/coverage/
+*.cobertura.xml
+
 # Visual Studio code coverage results
 *.coverage
 *.coveragexml
