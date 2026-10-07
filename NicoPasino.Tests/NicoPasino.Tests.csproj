@@ -27,6 +27,9 @@
     <PackageReference Include="FluentAssertions" Version="[7.2.0]" />
     <!-- Solo para los tests de controller, donde hace falta simular las interfaces IServicioGenerico -->
     <PackageReference Include="NSubstitute" Version="[5.3.0]" />
+    <!-- Solo para los tests del repositorio real (#27): un DbContext InMemory en vez
+         de MySQL. Nunca se agrega a produccion. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="[9.0.0]" />
   </ItemGroup>
 
   <ItemGroup>
