@@ -10,17 +10,16 @@ using NicoPasino.Tests.Common.Builders;
 namespace NicoPasino.Tests.Controllers;
 
 /// <summary>
-/// Tests de los 7 endpoints de <c>Ventas.Clientes.cs</c> (#27).
+/// Tests de los 6 endpoints de <c>Ventas.Clientes.cs</c> (#27).
 /// <para>
-/// Los endpoints GET/POST/PUT/DELETE se prueban contra sustitutos de
+/// Los endpoints GET/POST/PUT se prueban contra sustitutos de
 /// <c>IServicioGenerico</c>: solo traducen (resultado | excepcion) a codigo HTTP.
 /// El PATCH se prueba contra el <c>ClienteServicio</c> real porque <c>Patch</c> es
 /// no-virtual y no se puede sustituir.
 /// </para>
 /// <para>
-/// El unico comportamiento roto que este archivo documenta es que
-/// <c>DELETE Clientes/{id}</c> ignora el resultado del servicio
-/// (<see cref="BugsConocidos.IssueEliminarIgnoraElResultado"/>).
+/// No hay DELETE: la baja fisica no esta permitida. DELETE /Clientes/{id}
+/// responde 405 (ver <c>Endpoints405Tests</c>).
 /// </para>
 /// </summary>
 public class VentasControllerClientesTests
@@ -380,58 +379,6 @@ public class VentasControllerClientesTests
         resultado.Prop("message").Should().Be("Ya existe un cliente con el correo 'b@example.com'.");
     }
 
-    // ============================================================= DELETE Clientes
-
-    [Fact]
-    public async Task Eliminar_exitoso_devuelve_200_con_success_true()
-    {
-        var h = new VentasControllerHarness();
-        h.ServicioCliente.Enable(Arg.Any<int>(), false).Returns(true);
-
-        var resultado = await h.Controller.EliminarCliente(1);
-
-        resultado.Estado().Should().Be(200);
-        resultado.Prop("success").Should().Be(true);
-    }
-
-    /// <summary>
-    /// Caracteriza el bug #39: el controller ignora el <c>bool</c> que devuelve
-    /// <c>Enable</c>. Aunque la baja logica no haya tocado nada, responde exito.
-    /// </summary>
-    [Fact]
-    public async Task Eliminar_ignora_el_resultado_del_servicio__BUG_respuesta_siempre_success()
-    {
-        var h = new VentasControllerHarness();
-        h.ServicioCliente.Enable(Arg.Any<int>(), false).Returns(false);
-
-        var resultado = await h.Controller.EliminarCliente(1);
-
-        resultado.Estado().Should().Be(200, BugsConocidos.EliminarIgnoraElResultado);
-        resultado.Prop("success").Should().Be(true);
-    }
-
-    [Fact]
-    public async Task Eliminar_con_DataException_devuelve_400()
-    {
-        var h = new VentasControllerHarness();
-        h.ServicioCliente.Enable(Arg.Any<int>(), false)
-            .Returns(Task.FromException<bool>(new DataException("Documento no válido")));
-
-        var resultado = await h.Controller.EliminarCliente(1);
-
-        resultado.Estado().Should().Be(400);
-        resultado.Prop("message").Should().Be("Documento no válido");
-    }
-
-    [Fact]
-    public async Task Eliminar_cuando_el_servicio_lanza_una_excepcion_generica_devuelve_500()
-    {
-        var h = new VentasControllerHarness();
-        h.ServicioCliente.Enable(Arg.Any<int>(), false)
-            .Returns(Task.FromException<bool>(new InvalidOperationException("boom")));
-
-        var resultado = await h.Controller.EliminarCliente(1);
-
-        resultado.Estado().Should().Be(500);
-    }
+    // No hay tests de DELETE Clientes: el endpoint se elimino y DELETE
+    // /Clientes/{id} responde 405 (ver Endpoints405Tests).
 }

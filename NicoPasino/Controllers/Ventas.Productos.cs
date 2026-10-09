@@ -100,20 +100,9 @@ namespace NicoPasino.Controllers
             }
         }
 
-        [HttpDelete("Productos/{id}")]
-        public async Task<IActionResult> EliminarProducto(int id) {
-            try {
-                var res = await _productoServicio.Enable(id, false);
-                if (res) return Ok();
-                else throw new Exception();
-            }
-            catch (DataException ex) {
-                return BadRequest(new { message = ex.Message }); // 400
-            }
-            catch (Exception ex) {
-                return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
-            }
-        }
+        // No existe DELETE: la baja fisica no esta permitida. La habilitacion y
+        // deshabilitacion se hacen con PATCH (ProductoPatchDto.Activo); un DELETE
+        // sobre Productos/{id} responde 405 automaticamente por el routing.
 
         // -------------------------------------------
         // ------------ Categorías -------------------

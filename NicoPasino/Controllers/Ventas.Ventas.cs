@@ -69,20 +69,9 @@ namespace NicoPasino.Controllers
             }
         }
 
-        [HttpDelete("Ventas/{id}")]
-        public async Task<IActionResult> EliminarVenta(int id) {
-            try {
-                var res = await _ventaServicio.Enable(id, false);
-                return Ok(new { success = true });
-            }
-            catch (NotImplementedException ex) {
-                return StatusCode(StatusCodes.Status501NotImplemented, new { message = ex.Message }); // 501
-            }
-            catch (Exception ex) {
-                return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
-            }
-        }
-
+        // No existe DELETE: la baja fisica no esta permitida. La tabla 'venta' no
+        // tiene columna 'activo'; un DELETE sobre Ventas/{id} responde 405
+        // automaticamente por el routing.
 
         /* UPDATE
         [HttpPut("Ventas")]

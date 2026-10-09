@@ -19,12 +19,6 @@ public static class BugsConocidos
     // ------------------------------------------------------------ descripciones
     // El texto describe el comportamiento observado (el bug), no el deseado.
 
-    public const string EnableProductoIgnoraEstado =
-        "ProductoServicio.Enable ignora el parametro 'estado' y hace toggle en vez de desactivar";
-
-    public const string EliminarIgnoraElResultado =
-        "EliminarCliente y EliminarVenta responden success=true sin mirar el resultado del servicio";
-
     public const string VentaCreateSinTransaccion =
         "VentaServicio.Create no usa transaccion: la venta y el descuento de stock pueden quedar a medias";
 
@@ -33,8 +27,6 @@ public static class BugsConocidos
 
     // ------------------------------------------------------------ numeros de issue
 
-    public const int IssueEnableProducto = 34;
-    public const int IssueEliminarIgnoraElResultado = 39;
     public const int IssueVentaCreateSinTransaccion = 41;
     public const int IssueAsNoTrackingInconsistente = 48;
 

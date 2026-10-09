@@ -15,12 +15,11 @@ using NicoPasino.Tests.Common.Fakes;
 namespace NicoPasino.Tests.Controllers;
 
 /// <summary>
-/// Tests de los 5 endpoints activos de <c>Ventas.Ventas.cs</c> (#28). El
+/// Tests de los 4 endpoints activos de <c>Ventas.Ventas.cs</c> (#28). El
 /// <c>PUT Ventas</c> esta comentado en el controller, asi que no se prueba.
 /// <para>
-/// <c>DELETE Ventas/{id}</c> responde 501 Not Implemented porque
-/// <c>VentaServicio.Enable</c> lanza <c>NotImplementedException</c> (la tabla
-/// <c>venta</c> no tiene columna <c>activo</c>).
+/// No hay DELETE: la baja fisica no esta permitida. DELETE /Ventas/{id} responde
+/// 405 (ver <c>Endpoints405Tests</c>).
 /// </para>
 /// </summary>
 public class VentasControllerVentasTests
@@ -242,49 +241,6 @@ public class VentasControllerVentasTests
         resultado.Cuerpo()!.ToString().Should().NotContain("secreto");
     }
 
-    // ============================================================= DELETE Ventas
-
-    /// <summary>
-    /// Con el <c>VentaServicio</c> <b>real</b>: <c>Enable</c> lanza
-    /// <c>NotImplementedException</c> porque la tabla <c>venta</c> no tiene columna
-    /// <c>activo</c>, y el controller la traduce a 501 Not Implemented (#37).
-    /// </summary>
-    [Fact]
-    public async Task Eliminar_devuelve_501_porque_Enable_no_esta_implementado()
-    {
-        var repoVenta = new RepositorioGenericoVentasFake<Venta>();
-        var repoCliente = new RepositorioGenericoVentasFake<Cliente>();
-        var repoProducto = new RepositorioGenericoVentasFake<Producto>();
-        var repoCategoria = new RepositorioGenericoVentasFake<Categoria>();
-        var ventaReal = new VentaServicio(
-            repoVenta, repoCliente, repoProducto,
-            new RepositorioGenericoVentasFake<Ventaporproducto>(),
-            new VentaValidador(repoCliente, repoProducto));
-
-        var controller = new VentasController(
-            Substitute.For<IServicioGenerico<Producto, ProductoDto, ProductoDto>>(),
-            ventaReal,
-            Substitute.For<IServicioGenerico<Cliente, ClienteDto, ClienteDto>>(),
-            Substitute.For<IServicioGenerico<Categoria, CategoriaDto, CategoriaDto>>(),
-            new ProductoServicio(repoProducto, new ProductoValidador(repoCategoria)),
-            new ClienteServicio(repoCliente, new ClienteValidador(repoCliente)));
-
-        var resultado = await controller.EliminarVenta(1);
-
-        resultado.Estado().Should().Be(501);
-        resultado.Prop("message").Should().Be(
-            "La baja de ventas no está implementada: la tabla 'venta' no tiene columna 'activo'.");
-    }
-
-    [Fact]
-    public async Task Eliminar_cuando_el_servicio_lanza_una_excepcion_generica_devuelve_500()
-    {
-        var h = new VentasControllerHarness();
-        h.ServicioVenta.Enable(Arg.Any<int>(), false)
-            .Returns(Task.FromException<bool>(new InvalidOperationException("boom")));
-
-        var resultado = await h.Controller.EliminarVenta(1);
-
-        resultado.Estado().Should().Be(500);
-    }
+    // No hay tests de DELETE Ventas: el endpoint se elimino y DELETE
+    // /Ventas/{id} responde 405 (ver Endpoints405Tests).
 }

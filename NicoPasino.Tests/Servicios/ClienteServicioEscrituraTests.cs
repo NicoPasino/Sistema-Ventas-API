@@ -602,71 +602,52 @@ public class ClienteServicioPatchTests
 }
 
 /// <summary>
-/// Tests de <c>ClienteServicio.Enable</c> (#20). A diferencia de
-/// <c>ProductoServicio.Enable</c>, este si asigna el estado recibido.
+/// Tests de <c>ClienteServicio.Enable</c> (#20, #39). La API ya no permite baja
+/// fisica: habilitar/deshabilitar se hace con PATCH, asi que <c>Enable</c> queda
+/// como contrato de <c>IServicioGenerico</c> y lanza <c>NotImplementedException</c>.
 /// </summary>
 public class ClienteServicioEnableTests
 {
-    private static Cliente Original(bool activo = true) => ClienteBuilder.Uno()
-        .ConId(7).ConDocumento(30111222).ConNombre("Ana Gomez").ConCorreo("ana@correo.com").ConActivo(activo).Build();
-
-    private static (ClienteServicio Servicio, RepositorioGenericoVentasFake<Cliente> Repo)
-        CrearCon(params Cliente[] clientes)
+    private static (ClienteServicio Servicio, RepositorioGenericoVentasFake<Cliente> Repo) CrearCon()
     {
-        var repo = new RepositorioGenericoVentasFake<Cliente>(clientes.Length > 0 ? clientes : [Original()]);
+        var repo = new RepositorioGenericoVentasFake<Cliente>(
+            [ClienteBuilder.Uno().ConId(7).ConDocumento(30111222)
+                .ConNombre("Ana Gomez").ConCorreo("ana@correo.com").ConActivo(true).Build()]);
         return (new ClienteServicio(repo, new ClienteValidador(repo)), repo);
     }
 
+    /// <summary>
+    /// Caracteriza que la baja logica de clientes ya no esta implementada: el
+    /// endpoint DELETE se elimino y la habilitacion/deshabilitacion se hace por
+    /// PATCH. La interfaz <c>IServicioGenerico</c> obliga a declarar el metodo.
+    /// </summary>
     [Fact]
-    public async Task Enable_asigna_el_estado_recibido()
+    public async Task Enable_lanza_NotImplementedException_siempre()
     {
-        var (servicio, repo) = CrearCon(Original(activo: true));
+        var (servicio, _) = CrearCon();
 
-        await servicio.Enable(30111222, false);
+        var excepcion = await Assert.ThrowsAsync<NotImplementedException>(() => servicio.Enable(30111222, true));
 
-        repo.Entidades.Single().Activo.Should().BeFalse();
+        excepcion.Message.Should().Be(
+            "La baja de clientes no está implementada: usar PATCH con 'activo' para habilitarlo o deshabilitarlo.");
     }
 
     [Fact]
-    public async Task Enable_enciende_un_cliente_inactivo()
+    public async Task Enable_falla_igual_para_el_estado_true_que_para_el_false()
     {
-        var (servicio, repo) = CrearCon(Original(activo: false));
+        var (servicio, _) = CrearCon();
 
-        await servicio.Enable(30111222, true);
-
-        repo.Entidades.Single().Activo.Should().BeTrue();
+        await Assert.ThrowsAsync<NotImplementedException>(() => servicio.Enable(30111222, false));
     }
 
     [Fact]
-    public async Task Enable_devuelve_true_aunque_la_base_no_afecte_ninguna_fila()
-    {
-        // A diferencia de Update y Patch, Enable no mira el resultado del Update.
-        var (servicio, repo) = CrearCon();
-        repo.ResultadoUpdate = 0;
-
-        (await servicio.Enable(30111222, false)).Should().BeTrue();
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(9999999)]
-    public async Task Enable_rechaza_un_documento_invalido(int documento)
+    public async Task Enable_no_toca_la_base_ni_valida_el_documento()
     {
         var (servicio, repo) = CrearCon();
 
-        var excepcion = await Assert.ThrowsAsync<DataException>(() => servicio.Enable(documento, true));
+        await Assert.ThrowsAsync<NotImplementedException>(() => servicio.Enable(0, true));
 
-        excepcion.Message.Should().Be("El documento debe tener 8 dígitos.");
         repo.VecesGetAsync.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task Enable_falla_si_no_encuentra_el_cliente()
-    {
-        var (servicio, _) = CrearCon([Original()]);
-
-        var excepcion = await Assert.ThrowsAsync<DataException>(() => servicio.Enable(33111222, true));
-
-        excepcion.Message.Should().Be("Documento no válido");
+        repo.VecesUpdate.Should().Be(0);
     }
 }

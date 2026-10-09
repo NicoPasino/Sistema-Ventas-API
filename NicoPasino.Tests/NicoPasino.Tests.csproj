@@ -30,6 +30,9 @@
     <!-- Solo para los tests del repositorio real (#27): un DbContext InMemory en vez
          de MySQL. Nunca se agrega a produccion. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="[9.0.0]" />
+    <!-- Solo para los tests de routing (#34, #39): levanta la API real en memoria
+         (WebApplicationFactory) para verificar los 405. Nunca se agrega a produccion. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="[9.0.0]" />
   </ItemGroup>
 
   <ItemGroup>

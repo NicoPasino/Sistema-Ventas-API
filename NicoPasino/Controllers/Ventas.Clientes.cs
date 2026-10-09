@@ -101,18 +101,8 @@ namespace NicoPasino.Controllers
             }
         }
 
-        [HttpDelete("Clientes/{id}")]
-        public async Task<IActionResult> EliminarCliente(int id) {
-            try {
-                var res = await _clienteServicio.Enable(id, false);
-                return Ok(new { success = true });
-            }
-            catch (DataException ex) {
-                return BadRequest(new { message = ex.Message }); // 400
-            }
-            catch (Exception ex) {
-                return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
-            }
-        }
+        // No existe DELETE: la baja fisica no esta permitida. La habilitacion y
+        // deshabilitacion se hacen con PATCH (ClientePatchDto.Activo); un DELETE
+        // sobre Clientes/{id} responde 405 automaticamente por el routing.
     }
 }

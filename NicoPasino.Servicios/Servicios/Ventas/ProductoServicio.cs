@@ -259,19 +259,11 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             throw new DataException("No se pudo generar un código único para el producto, reintentar.");
         }
 
-        public async Task<bool> Enable(int id, bool estado) {
-            if (id <= 0) throw new DataException("Id no válido");
-            var objDb = await _repoG.GetAsync(filtro: m => m.IdPublica == id);
-
-            if (objDb != null) {
-                objDb.FechaModificacion = DateTime.UtcNow;
-                objDb.Activo = !objDb.Activo;
-
-                await _repoG.Update(objDb);
-                //await _uow.SaveChangesAsync();
-                return true;
-            }
-            else throw new DataException("Id no válido");
+        public Task<bool> Enable(int id, bool estado) {
+            // La baja fisica no esta permitida: habilitar/deshabilitar se hace
+            // con PATCH (ProductoPatchDto.Activo). El metodo queda por contrato de
+            // IServicioGenerico.
+            throw new NotImplementedException("La baja de productos no está implementada: usar PATCH con 'activo' para habilitarlo o deshabilitarlo.");
         }
     }
 }

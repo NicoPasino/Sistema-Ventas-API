@@ -162,32 +162,11 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             else throw new UpdateException("No se pudo actualizar en la base de datos.");
         }
 
-        public async Task<bool> Enable(int id, bool estado) {
-            _validador.ValidarDocumento(id);
-
-            var objDb = await _repoG.GetAsync(filtro: m => m.Documento == id);
-
-            if (objDb != null) {
-                objDb.Activo = estado;
-                await _repoG.Update(objDb);
-                return true;
-            }
-            else throw new DataException("Documento no válido");
+        public Task<bool> Enable(int id, bool estado) {
+            // La baja fisica no esta permitida: habilitar/deshabilitar se hace
+            // con PATCH (ClientePatchDto.Activo). El metodo queda por contrato de
+            // IServicioGenerico.
+            throw new NotImplementedException("La baja de clientes no está implementada: usar PATCH con 'activo' para habilitarlo o deshabilitarlo.");
         }
-
-        /*public async Task<bool> Enable(int id, bool estado) {
-            if (id <= 0) throw new ArgumentException("Id no válido");
-            var objDb = await _repoG.GetAsync(filtro: m => m.Id == id);
-
-            if (objDb != null) {
-                //objDb.FechaModificacion = DateTime.UtcNow;
-                objDb.Activo = estado;
-
-                await _repoG.Update(objDb);
-                //await _uow.SaveChangesAsync();
-                return true;
-            }
-            else throw new ArgumentException("Id no válido");
-        }*/
     }
 }

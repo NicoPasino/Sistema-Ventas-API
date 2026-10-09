@@ -369,130 +369,53 @@ public class ProductoServicioPatchTests
 }
 
 /// <summary>
-/// Tests de <c>ProductoServicio.Enable</c> (#18). Ojo: el metodo <b>invierte</b> el
-/// estado (<c>Activo = !Activo</c>) en vez de <b>asignar</b> el que recibe.
+/// Tests de <c>ProductoServicio.Enable</c> (#18, #34). La API ya no permite baja
+/// fisica: habilitar/deshabilitar se hace con PATCH, asi que <c>Enable</c> queda
+/// como contrato de <c>IServicioGenerico</c> y lanza <c>NotImplementedException</c>.
 /// </summary>
 public class ProductoServicioEnableTests
 {
-    private static Categoria Bebidas => CategoriaBuilder.Uno().ConId(1).ConNombre("Bebidas").Build();
-
-    private static Producto Original(bool activo = true) => ProductoBuilder.Uno()
-        .ConId(50).ConIdPublica(1001).ConNombre("Gaseosa").ConActivo(activo).ConCategoria(Bebidas).Build();
-
-    private static (ProductoServicio Servicio, RepositorioGenericoVentasFake<Producto> Repo)
-        CrearCon(params Producto[] productos)
+    private static (ProductoServicio Servicio, RepositorioGenericoVentasFake<Producto> Repo) CrearCon()
     {
-        var repo = new RepositorioGenericoVentasFake<Producto>(productos.Length > 0 ? productos : [Original()]);
-        var repoCategoria = new RepositorioGenericoVentasFake<Categoria>(Bebidas);
+        var repo = new RepositorioGenericoVentasFake<Producto>(
+            [ProductoBuilder.Uno().ConId(50).ConIdPublica(1001).Build()]);
+        var repoCategoria = new RepositorioGenericoVentasFake<Categoria>(
+            [CategoriaBuilder.Uno().ConId(1).Build()]);
         return (new ProductoServicio(repo, new ProductoValidador(repoCategoria)), repo);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task Enable_rechaza_un_id_no_positivo(int id)
+    /// <summary>
+    /// Caracteriza que la baja logica de productos ya no esta implementada: el
+    /// endpoint DELETE se elimino y la habilitacion/deshabilitacion se hace por
+    /// PATCH. La interfaz <c>IServicioGenerico</c> obliga a declarar el metodo.
+    /// </summary>
+    [Fact]
+    public async Task Enable_lanza_NotImplementedException_siempre()
     {
         var (servicio, _) = CrearCon();
 
-        var excepcion = await Assert.ThrowsAsync<DataException>(() => servicio.Enable(id, true));
+        var excepcion = await Assert.ThrowsAsync<NotImplementedException>(() => servicio.Enable(1001, true));
 
-        excepcion.Message.Should().Be("Id no válido");
+        excepcion.Message.Should().Be(
+            "La baja de productos no está implementada: usar PATCH con 'activo' para habilitarlo o deshabilitarlo.");
     }
 
     [Fact]
-    public async Task Enable_busca_por_el_IdPublica()
-    {
-        var (servicio, repo) = CrearCon();
-
-        await servicio.Enable(1001, false);
-
-        repo.VecesGetAsync.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task Enable_falla_si_no_encuentra_el_producto()
-    {
-        var (servicio, _) = CrearCon([Original()]);
-
-        var excepcion = await Assert.ThrowsAsync<DataException>(() => servicio.Enable(7777, true));
-
-        excepcion.Message.Should().Be("Id no válido");
-    }
-
-    /// <summary>
-    /// Caracteriza que <c>Enable</c> <b>invierte</b> el estado en vez de asignarlo:
-    /// la linea 268 es <c>Activo = !Activo</c>, asi que el parametro <c>estado</c> se
-    /// ignora por completo. Un cliente que mande <c>estado = true</c> sobre un
-    /// producto ya activo lo <b>desactiva</b>.
-    /// Referencia: bug #40.
-    /// </summary>
-    [Fact]
-    public async Task Enable_invierte_el_estado_en_vez_de_asignar_el_estado_recibido()
-    {
-        var (servicio, repo) = CrearCon(Original(activo: true));
-
-        await servicio.Enable(1001, true);
-
-        repo.Entidades.Single().Activo.Should().BeFalse("estado = true sobre un activo lo apaga");
-    }
-
-    [Fact]
-    public async Task Enable_sobre_un_producto_inactivo_lo_enciende_aunque_se_pida_apagarlo()
-    {
-        var (servicio, repo) = CrearCon(Original(activo: false));
-
-        await servicio.Enable(1001, false);
-
-        repo.Entidades.Single().Activo.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Enable_devuelve_true()
+    public async Task Enable_falla_igual_para_el_estado_true_que_para_el_false()
     {
         var (servicio, _) = CrearCon();
 
-        (await servicio.Enable(1001, false)).Should().BeTrue();
+        await Assert.ThrowsAsync<NotImplementedException>(() => servicio.Enable(1001, false));
     }
 
     [Fact]
-    public async Task Enable_renueva_la_fecha_de_modificacion()
-    {
-        var (servicio, repo) = CrearCon();
-        var antes = DateTime.UtcNow;
-
-        await servicio.Enable(1001, false);
-
-        repo.UltimaEntidadActualizada!.FechaModificacion!.Value.Should().BeOnOrAfter(antes);
-    }
-
-    [Fact]
-    public async Task Enable_persiste_el_cambio_del_estado()
+    public async Task Enable_no_toca_la_base_ni_valida_el_id()
     {
         var (servicio, repo) = CrearCon();
 
-        await servicio.Enable(1001, false);
+        await Assert.ThrowsAsync<NotImplementedException>(() => servicio.Enable(0, true));
 
-        repo.VecesUpdate.Should().Be(1);
-        repo.Entidades.Single().Activo.Should().BeFalse();
-    }
-
-    /// <summary>
-    /// Contraste con <c>ClienteServicio.Enable</c>, que si asigna <c>Activo = estado</c>.
-    /// Los dos metodos tienen la misma firma y semantica opuesta.
-    /// Referencia: bug #40.
-    /// </summary>
-    [Fact]
-    public async Task Enable_de_producto_y_de_cliente_tienen_semantica_opuesta()
-    {
-        var (servicioProducto, repoProducto) = CrearCon(Original(activo: true));
-        var repoCliente = new RepositorioGenericoVentasFake<Cliente>(
-            ClienteBuilder.Uno().ConId(1).ConDocumento(30111222).ConActivo(true).Build());
-        var servicioCliente = new ClienteServicio(repoCliente, new ClienteValidador(repoCliente));
-
-        await servicioProducto.Enable(1001, true);
-        await servicioCliente.Enable(30111222, true);
-
-        repoProducto.Entidades.Single().Activo.Should().BeFalse();
-        repoCliente.Entidades.Single().Activo.Should().BeTrue();
+        repo.VecesGetAsync.Should().Be(0);
+        repo.VecesUpdate.Should().Be(0);
     }
 }

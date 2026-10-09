@@ -10,7 +10,7 @@ using NicoPasino.Tests.Common.Builders;
 namespace NicoPasino.Tests.Controllers;
 
 /// <summary>
-/// Tests de los 9 endpoints de <c>Ventas.Productos.cs</c> (productos + categorias) (#26).
+/// Tests de los 8 endpoints de <c>Ventas.Productos.cs</c> (productos + categorias) (#26).
 /// <para>
 /// Patron a verificar en todos los actions: <c>DataException -> 400</c> con
 /// <c>{ message }</c>, excepcion generica -> <c>500</c> con el string
@@ -362,56 +362,8 @@ public class VentasControllerProductosCategoriasTests
         resultado.Prop("message").Should().Be("No se recibieron datos para actualizar.");
     }
 
-    // ============================================================ DELETE Productos
-
-    [Fact]
-    public async Task Eliminar_producto_exitoso_devuelve_200_vacio()
-    {
-        var h = new VentasControllerHarness();
-        h.ServicioProducto.Enable(Arg.Any<int>(), false).Returns(true);
-
-        var resultado = await h.Controller.EliminarProducto(1);
-
-        resultado.Estado().Should().Be(200);
-        resultado.Cuerpo().Should().BeNull();
-    }
-
-    [Fact]
-    public async Task Eliminar_producto_cuando_Enable_devuelve_false_devuelve_500()
-    {
-        var h = new VentasControllerHarness();
-        h.ServicioProducto.Enable(Arg.Any<int>(), false).Returns(false);
-
-        var resultado = await h.Controller.EliminarProducto(1);
-
-        resultado.Estado().Should().Be(500);
-        resultado.Cuerpo().Should().Be("Error de servidor: StatusCode 500");
-    }
-
-    [Fact]
-    public async Task Eliminar_producto_con_DataException_devuelve_400()
-    {
-        var h = new VentasControllerHarness();
-        h.ServicioProducto.Enable(Arg.Any<int>(), false)
-            .Returns(Task.FromException<bool>(new DataException("Id no válido")));
-
-        var resultado = await h.Controller.EliminarProducto(1);
-
-        resultado.Estado().Should().Be(400);
-        resultado.Prop("message").Should().Be("Id no válido");
-    }
-
-    [Fact]
-    public async Task Eliminar_producto_cuando_el_servicio_lanza_generica_devuelve_500()
-    {
-        var h = new VentasControllerHarness();
-        h.ServicioProducto.Enable(Arg.Any<int>(), false)
-            .Returns(Task.FromException<bool>(new InvalidOperationException("boom")));
-
-        var resultado = await h.Controller.EliminarProducto(1);
-
-        resultado.Estado().Should().Be(500);
-    }
+    // No hay tests de DELETE Productos: el endpoint se elimino y DELETE
+    // /Productos/{id} responde 405 (ver Endpoints405Tests).
 
     // ============================================================== GET Categorias
 

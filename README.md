@@ -60,8 +60,7 @@ productos/...
 │   ├─── (GET /search/{campo}/{valor?}) Busca por campo (numero, nombre, otro, proveedor) y valor
 │   ├─── (POST)                      Agrega un producto
 │   ├─── (PUT)                       Modifica un producto
-│   ├─── (PATCH /{idPublica})        Modifica campos sueltos (ProductoPatchDto)
-│   └─── (DELETE /{id})              Baja lógica (usa idPublica internamente)
+│   └─── (PATCH /{idPublica})        Modifica campos sueltos; { "activo": bool } habilita/deshabilita
 |
 clientes/...
 │   ├─── (GET)                       Trae todos los clientes
@@ -69,20 +68,24 @@ clientes/...
 │   ├─── (GET /search/{campo}/{valor?}) Busca por campo (numero, nombre, otro) y valor
 │   ├─── (POST)                      Agrega un cliente
 │   ├─── (PUT)                       Modifica un cliente
-│   ├─── (PATCH /{id})               Modifica campos sueltos (ClientePatchDto)
-│   └─── (DELETE /{id})              Baja lógica
+│   └─── (PATCH /{id})               Modifica campos sueltos; { "activo": bool } habilita/deshabilita
 |
 ventas/...
 │   ├─── (GET)                       Trae todas las ventas
 │   ├─── (GET /{id})                 Trae una venta (VentaDetalleDto)
 │   ├─── (GET /search/{campo}/{valor?}) Busca por campo (numero, nombre, otro) y valor
-│   ├─── (POST)                      Agrega una venta
-│   └─── (DELETE /{id})              Elimina una venta (siempre 500: sin implementar)
+│   └─── (POST)                      Agrega una venta
 |
 categorias/...
     ├─── (GET)                       Trae todas las categorías
     └─── (GET /{id})                 Trae una categoría
 ```
+
+**No existe `DELETE` en ningún recurso: no hay baja física.** Un `DELETE` sobre
+`productos/{id}`, `clientes/{id}` o `ventas/{id}` responde `405 Method Not Allowed`.
+El estado (habilitado/deshabilitado) de productos y clientes se cambia únicamente
+con `PATCH { "activo": bool }`; `Enable` queda como contrato de `IServicioGenerico`
+y lanza `NotImplementedException` (igual que en ventas y categorías).
 
 Detalle: en `productos` el `{idPublica}` es el número expuesto al front
 (no la PK interna); en `clientes` el `{id}` es el documento. En `ventas` el
@@ -98,24 +101,25 @@ un contexto EF Core InMemory. La suite corre en CI vía `.github/workflows/tests
 
 [![Tests](https://github.com/NicoPasino/Sistema-Ventas-API/actions/workflows/tests.yml/badge.svg)](https://github.com/NicoPasino/Sistema-Ventas-API/actions/workflows/tests.yml)
 
-### Qué se cubre hoy
+### Qué se cubre
 
-**740 tests** (aprobados), organizados por carpeta:
+**725 tests** (aprobados), organizados por carpeta:
 
 | Carpeta | Cobertura |
 |---|---|
 | `Servicios` | `ProductoServicio`, `ClienteServicio`, `VentaServicio` y `CategoriaServicio`: lectura, create, update, patch, enable, validaciones y guardas de null |
 | `Mapper` | Los 5 mapeos de `MappingConfig.VentasMappings` (`Producto↔ProductoDto`, `Venta→VentaDto`, `Venta→VentaDetalleDto`, `Ventaporproducto→VentaporproductoDto`, `Cliente→ClienteDto`) y los riesgos de navegación sin `Include` |
 | `Validadores` | `ProductoValidador`, `ClienteValidador`, `VentaValidador` (incluida la rama async con categoría/producto inexistentes) y `DataAnnotationsDtoTests` (reglas y mensajes de los DTOs) |
-| `Controllers` | Endpoints de `VentasController` (`.Ventas.Clientes`, `.Ventas.Productos` y `.Ventas.Ventas`): todas las rutas (GET, search, POST, PUT, PATCH, DELETE) |
+| `Controllers` | Endpoints de `VentasController` (`.Ventas.Clientes`, `.Ventas.Productos` y `.Ventas.Ventas`): rutas GET, search, POST, PUT y PATCH; `Endpoints405Tests` verifica que `DELETE` responde 405 vía `WebApplicationFactory` |
 | `Infraestructura` | `RepositorioGenericoVentas<T>` real sobre EF InMemory (los 8 métodos) y `RepositorioGenericoVentasFake<T>` |
 
-Cada carpeta usa un patrón distinto a propósito: los servicios se prueban contra el
+<!-- Cada carpeta usa un patrón distinto a propósito: los servicios se prueban contra el
 fake que **registra** responsabilidades de cada repositorio y de verdad evalúa el
 `Expression<Func<T, bool>>` de los filtros; los controllers se arman con un
 `VentasControllerHarness` (NSubstitute para los 4 `IServicioGenerico`, instancias
-reales de `ProductoServicio`/`ClienteServicio` para los PATCH y `VentaServicio` para
-los DELETE); el repositorio real se ejercita con InMemory.
+reales de `ProductoServicio`/`ClienteServicio` para los PATCH); el repositorio real
+se ejercita con InMemory, y los 405 se comprueban levantando la API real con
+`WebApplicationFactory`. -->
 
 ```bash
 # Correr toda la suite
@@ -128,7 +132,7 @@ dotnet test --settings .runsettings --collect:"XPlat Code Coverage"
 dotnet test --filter "FullyQualifiedName~ProductoValidador"
 ```
 
-El reporte HTML de cobertura se genera con `reportgenerator` sobre el XML de coverlet.
+<!-- El reporte HTML de cobertura se genera con `reportgenerator` sobre el XML de coverlet.
 
 ### Qué NO se cubre y por qué
 
@@ -146,17 +150,6 @@ Una parte de la suite son **tests de caracterización**: fijan el comportamiento
 actual aunque sea erróneo y lo marcan como `// BUG: ver issue #N`, referenciando
 `Common/BugsConocidos.cs`. Sirven de red de seguridad antes de corregir.
 
-| Bug | Problema |
-|---|---|
-| `#35` | `GET /api/ventas/clientes/{id}` nunca devuelve 404 (rama muerta) |
-| `#34` | `PATCH /productos` con `Enable=false` desincroniza `Estado` |
-| `#39` | `DELETE /clientes/{id}` ignora el resultado del servicio |
-| `#37` | `DELETE /ventas/{id}` siempre responde 500 (`Enable` sin implementar) |
-| `#38` | `GET /api/ventas/ventas/{id}` nunca devuelve 404 (`NotFound` comentado) |
-| `#36` | `search` con `campo` vacío responde 500 en vez de 400 |
-| `#41` | `VentaServicio.Create` guarda sin transacción |
-| `#48` | `RepositorioGenericoVentas` usa `AsNoTracking()` de forma inconsistente (rompe los `Update`/PATCH) |
-
 ### Cómo escribir un test
 
 | Qué necesitás | Usá |
@@ -171,7 +164,7 @@ El fake registra las llamadas (`VecesUpdate`, `UltimaEntidadActualizada`, `Ultim
 
 `MappingConfig.VentasMappings()` se carga una sola vez por ensamblado desde
 `Common/InicializadorMapster.cs`, porque `TypeAdapterConfig` es estado estático global
-y en producción se inicializa en `Program.Main`.
+y en producción se inicializa en `Program.Main`. -->
 
 ## 🧑‍💻 Autor:
 Nicolás Pasino - nico_pasino@hotmail.com
