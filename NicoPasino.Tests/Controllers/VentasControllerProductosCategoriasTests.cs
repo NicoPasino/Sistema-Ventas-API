@@ -117,21 +117,20 @@ public class VentasControllerProductosCategoriasTests
     }
 
     /// <summary>
-    /// Caracteriza el bug #36: la <c>ArgumentException</c> de campo vacio no la
-    /// catchea el <c>catch (DataException)</c> sino el generico, y devuelve 500 en
-    /// vez de 400.
+    /// Con el campo vacio el servicio lanza <c>DataException</c> -> 400 (#36).
     /// </summary>
     [Fact]
-    public async Task Search_productos_con_campo_vacio_devuelve_500_en_vez_de_400__BUG()
+    public async Task Search_productos_con_campo_vacio_devuelve_400()
     {
         var h = new VentasControllerHarness();
         h.ServicioProducto.GetAll(Arg.Any<string>(), Arg.Any<string?>())
             .Returns(Task.FromException<IEnumerable<ProductoDto>>(
-                new ArgumentException("Campo de búsqueda no válido.")));
+                new DataException("Campo de búsqueda no válido.")));
 
         var resultado = await h.Controller.GetAllProductos("", null);
 
-        resultado.Estado().Should().Be(500, BugsConocidos.BusquedaConCampoVacioDevuelve500);
+        resultado.Estado().Should().Be(400);
+        resultado.Prop("message").Should().Be("Campo de búsqueda no válido.");
     }
 
     // ============================================================== GET Productos/{id}

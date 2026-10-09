@@ -174,7 +174,7 @@ public class VentaServicioLecturaTests
     {
         var (servicio, repo) = CrearCon(Venta(1, 100));
 
-        (await Assert.ThrowsAsync<ArgumentException>(() => servicio.GetAll(campo!, "valor")))
+        (await Assert.ThrowsAsync<DataException>(() => servicio.GetAll(campo!, "valor")))
             .Message.Should().Contain("Campo de búsqueda no válido.");
         repo.VecesListar.Should().Be(0);
     }
@@ -381,32 +381,23 @@ public class VentaServicioLecturaTests
     }
 
     /// <summary>
-    /// Caracteriza que un id inexistente devuelve un <c>VentaDetalleDto</c> vacio en
-    /// vez de <c>null</c> o una excepcion. Mismo patron que Producto y Cliente.
-    /// Referencia: bug #35.
+    /// Un id inexistente devuelve <c>null</c>, para que el controller pueda responder
+    /// 404 (#38).
     /// </summary>
     [Fact]
-    public async Task GetById_inexistente_devuelve_un_DTO_vacio_en_vez_de_null()
+    public async Task GetById_inexistente_devuelve_null()
     {
         var (servicio, _) = CrearCon(Venta(1, 100));
 
         var resultado = await servicio.GetById(999);
 
-        resultado.Should().NotBeNull();
-        resultado.Numero.Should().BeNull();
-        resultado.Detalle.Should().BeNull();
-        resultado.Cliente.Should().BeNull();
-        resultado.Productos.Should().BeNull();
-        resultado.Total.Should().Be(0m);
+        resultado.Should().BeNull();
     }
 
     /// <summary>
     /// Caracteriza que <c>VentaDetalleDto</c> no tiene campo <c>Id</c>: ni la pk
-    /// interna ni el <c>Numero</c> vuelven cuando no esta. Un cliente que pide una
-    /// venta inexistente no tiene forma de distinguir el "404" del "200 con cuerpo
-    /// vacio", y no puede usar la respuesta para encadenar un <c>Update</c> (que si
-    /// exige <c>Id</c>).
-    /// Referencia: bug #35.
+    /// interna ni el <c>Numero</c> vuelven. El cliente no puede usar la respuesta para
+    /// encadenar un <c>Update</c> (que si exige <c>Id</c>).
     /// </summary>
     [Fact]
     public async Task GetById_no_devuelve_la_pk_interna_que_exige_el_Update()

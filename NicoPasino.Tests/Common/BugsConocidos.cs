@@ -22,23 +22,8 @@ public static class BugsConocidos
     public const string EnableProductoIgnoraEstado =
         "ProductoServicio.Enable ignora el parametro 'estado' y hace toggle en vez de desactivar";
 
-    public const string ClienteGetByIdNuncaDevuelve404 =
-        "GET /Clientes/{id} nunca devuelve 404: el servicio devuelve un DTO vacio y la rama NotFound queda muerta";
-
-    public const string BusquedaConCampoVacioDevuelve500 =
-        "GetAll(campo) con 'campo' vacio lanza ArgumentException, que el controller no catchea (500 en vez de 400)";
-
-    public const string EliminarVentaSiempreDevuelve500 =
-        "DELETE /Ventas/{id} siempre devuelve 500: VentaServicio.Enable lanza NotImplementedException";
-
-    public const string VentaGetByIdNuncaDevuelve404 =
-        "GET /Ventas/{id} nunca devuelve 404: el NotFound esta comentado y GetById devuelve un DTO vacio";
-
     public const string EliminarIgnoraElResultado =
         "EliminarCliente y EliminarVenta responden success=true sin mirar el resultado del servicio";
-
-    public const string ClienteGetByIdNombreNull =
-        "ClienteServicio.GetById devuelve un DTO con Nombre == null en una propiedad declarada no-nulable";
 
     public const string VentaCreateSinTransaccion =
         "VentaServicio.Create no usa transaccion: la venta y el descuento de stock pueden quedar a medias";
@@ -49,10 +34,6 @@ public static class BugsConocidos
     // ------------------------------------------------------------ numeros de issue
 
     public const int IssueEnableProducto = 34;
-    public const int IssueClienteGetByIdNunca404 = 35;
-    public const int IssueBusquedaCampoVacio = 36;
-    public const int IssueEliminarVentaSiempre500 = 37;
-    public const int IssueVentaGetByIdNunca404 = 38;
     public const int IssueEliminarIgnoraElResultado = 39;
     public const int IssueVentaCreateSinTransaccion = 41;
     public const int IssueAsNoTrackingInconsistente = 48;

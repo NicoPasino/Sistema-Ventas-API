@@ -26,7 +26,14 @@ namespace NicoPasino
                 options.AddPolicy(name: misReglasCORS, policy => { policy.WithOrigins(acceptedOrigins).AllowAnyHeader().AllowAnyMethod(); });
             });
 
-            builder.Services.AddControllersWithViews();
+            // API pura: sin vistas. Se registran controllers y ProblemDetails para
+            // estandarizar las respuestas de error.
+            builder.Services.AddControllers()
+                .AddMvcOptions(options => {
+                    options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(
+                        _ => "El campo es requerido.");
+                });
+            builder.Services.AddProblemDetails();
 
             // Configuraciones para Mapster
             MappingConfig.VentasMappings();
@@ -50,13 +57,6 @@ namespace NicoPasino
             builder.Services.AddScoped<IServicioGenerico<Venta, VentaDto, VentaDetalleDto>, VentaServicio>();
             builder.Services.AddScoped<IServicioGenerico<Cliente, ClienteDto, ClienteDto>, ClienteServicio>();
             builder.Services.AddScoped<IServicioGenerico<Categoria, CategoriaDto, CategoriaDto>, CategoriaServicio>();
-
-            // cambiar texto de validacion de la vista
-            builder.Services.AddRazorPages()
-            .AddMvcOptions(options => {
-                options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(
-                    _ => "El campo es requerido.");
-            });
 
             builder.Services.AddHsts(options => {
                 options.Preload = true;
@@ -100,12 +100,18 @@ namespace NicoPasino
                 await next();
             });
 
-            // Middleware para manejar códigos de estado: (re-ejecuta la petición internamente)
-            app.UseStatusCodePagesWithReExecute("/Home/NotFound", "?statusCode={0}");
+            // Middleware para 404: responder JSON, no re-ejecutar contra una vista inexistente.
+            app.UseStatusCodePages(async context => {
+                var response = context.HttpContext.Response;
+                if (response.StatusCode == StatusCodes.Status404NotFound) {
+                    response.ContentType = "application/json";
+                    await response.WriteAsJsonAsync(new { message = "Recurso no encontrado" });
+                }
+            });
 
-            // Middleware para Error 500
+            // Middleware para Error 500 (ProblemDetails)
             if (!app.Environment.IsDevelopment()) {
-                app.UseExceptionHandler("/Home/Error");
+                app.UseExceptionHandler();
                 app.UseHsts();
             }
 
@@ -120,10 +126,7 @@ namespace NicoPasino
 
 
             app.MapStaticAssets();
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}")
-                .WithStaticAssets();
+            app.MapControllers();
 
             app.Run();
         }

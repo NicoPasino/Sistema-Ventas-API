@@ -35,7 +35,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         }
 
         public async Task<IEnumerable<ClienteDto>> GetAll(string campo, string? valor) {
-            if (string.IsNullOrWhiteSpace(campo)) throw new ArgumentException("Campo de búsqueda no válido.");
+            if (string.IsNullOrWhiteSpace(campo)) throw new DataException("Campo de búsqueda no válido.");
             campo = campo.Trim().ToLowerInvariant();
             valor = valor?.Trim();
 
@@ -104,7 +104,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
                 var objDto = objDb.Adapt<ClienteDto>();
                 return objDto;
             }
-            else return new ClienteDto();
+            else return null!;
         }
 
         public async Task<bool> Create(ClienteDto obj) {

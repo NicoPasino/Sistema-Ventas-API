@@ -18,13 +18,9 @@ namespace NicoPasino.Tests.Controllers;
 /// no-virtual y no se puede sustituir.
 /// </para>
 /// <para>
-/// Los dos comportamientos rotos que este archivo documenta:
-/// <list type="bullet">
-///   <item><description>la rama 404 de <c>GET Clientes/{id}</c> es inalcanzable
-///   (<see cref="BugsConocidos.IssueClienteGetByIdNunca404"/>);</description></item>
-///   <item><description><c>DELETE Clientes/{id}</c> ignora el resultado del servicio
-///   (<see cref="BugsConocidos.IssueEliminarIgnoraElResultado"/>).</description></item>
-/// </list>
+/// El unico comportamiento roto que este archivo documenta es que
+/// <c>DELETE Clientes/{id}</c> ignora el resultado del servicio
+/// (<see cref="BugsConocidos.IssueEliminarIgnoraElResultado"/>).
 /// </para>
 /// </summary>
 public class VentasControllerClientesTests
@@ -108,12 +104,29 @@ public class VentasControllerClientesTests
     }
 
     /// <summary>
-    /// Caracteriza el bug #36: con el campo vacio el servicio lanza
-    /// <c>ArgumentException</c>, que el controller <b>no</b> catchea como 400 sino
-    /// como <c>Exception</c> generica -> 500.
+    /// Con el campo vacio el servicio lanza <c>DataException</c>, que el controller
+    /// traduce a 400 con el mensaje de negocio (#36).
     /// </summary>
     [Fact]
-    public async Task Search_con_campo_vacio_devuelve_500_en_vez_de_400__BUG_ArgumentException_no_catcheada()
+    public async Task Search_con_campo_vacio_devuelve_400_con_el_mensaje()
+    {
+        var h = new VentasControllerHarness();
+        h.ServicioCliente.GetAll(Arg.Any<string>(), Arg.Any<string?>())
+            .Returns(Task.FromException<IEnumerable<ClienteDto>>(
+                new DataException("Campo de búsqueda no válido.")));
+
+        var resultado = await h.Controller.GetAllClientes("", null);
+
+        resultado.Estado().Should().Be(400);
+        resultado.Prop("message").Should().Be("Campo de búsqueda no válido.");
+    }
+
+    /// <summary>
+    /// Red de seguridad (#36): aunque un servicio lanzara <c>ArgumentException</c>
+    /// en vez de <c>DataException</c>, el controller responde 400, no 500.
+    /// </summary>
+    [Fact]
+    public async Task Search_con_ArgumentException_devuelve_400()
     {
         var h = new VentasControllerHarness();
         h.ServicioCliente.GetAll(Arg.Any<string>(), Arg.Any<string?>())
@@ -122,7 +135,8 @@ public class VentasControllerClientesTests
 
         var resultado = await h.Controller.GetAllClientes("", null);
 
-        resultado.Estado().Should().Be(500, BugsConocidos.BusquedaConCampoVacioDevuelve500);
+        resultado.Estado().Should().Be(400);
+        resultado.Prop("message").Should().Be("Campo de búsqueda no válido.");
     }
 
     // ============================================================== GET Clientes/{id}
@@ -141,19 +155,19 @@ public class VentasControllerClientesTests
     }
 
     /// <summary>
-    /// Caracteriza el bug #35: la rama <c>NotFound</c> es codigo muerto porque el
-    /// servicio devuelve un DTO vacio (nunca <c>null</c>).
+    /// El servicio devuelve <c>null</c> cuando el cliente no existe, asi que la rama
+    /// <c>NotFound</c> responde 404 (#35).
     /// </summary>
     [Fact]
-    public async Task GetCliente_inexistente_devuelve_200_y_nunca_404__BUG_rama_404_muerta()
+    public async Task GetCliente_inexistente_devuelve_404()
     {
         var h = new VentasControllerHarness();
-        h.ServicioCliente.GetById(9999).Returns(new ClienteDto());
+        h.ServicioCliente.GetById(9999).Returns(Task.FromResult<ClienteDto>(null!));
 
         var resultado = await h.Controller.GetCliente(9999);
 
-        resultado.Estado().Should().Be(200, BugsConocidos.ClienteGetByIdNuncaDevuelve404);
-        resultado.Should().NotBeOfType<NotFoundObjectResult>();
+        resultado.Estado().Should().Be(404);
+        resultado.Should().BeOfType<NotFoundObjectResult>();
     }
 
     [Fact]

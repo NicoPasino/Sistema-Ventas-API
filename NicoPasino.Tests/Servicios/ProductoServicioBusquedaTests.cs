@@ -47,7 +47,7 @@ public class ProductoServicioBusquedaTests
     {
         var (servicio, repo, _) = CrearCon();
 
-        var excepcion = await Assert.ThrowsAsync<ArgumentException>(() => servicio.GetAll(campo!, "valor"));
+        var excepcion = await Assert.ThrowsAsync<DataException>(() => servicio.GetAll(campo!, "valor"));
 
         excepcion.Message.Should().Contain("Campo de búsqueda no válido.");
         repo.VecesListar.Should().Be(0, "falla antes de tocar el repositorio");

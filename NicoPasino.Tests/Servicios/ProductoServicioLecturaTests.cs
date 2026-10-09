@@ -222,10 +222,8 @@ public class ProductoServicioLecturaTests
     }
 
     /// <summary>
-    /// Caracteriza que "no encontrado" se comunica con un DTO vacio en vez de
-    /// <c>null</c> o una excepcion. El controller no puede distinguirlo de un
-    /// producto con todos los campos en cero.
-    /// Referencia: bug #35.
+    /// <c>ProductoServicio.GetById</c> conserva el patron de devolver un DTO vacio:
+    /// el controller de productos lo distingue con <c>obj?.IdPublica != null</c>.
     /// </summary>
     [Fact]
     public async Task GetById_devuelve_un_DTO_vacio_cuando_no_encuentra_el_producto()

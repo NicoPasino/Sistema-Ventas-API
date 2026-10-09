@@ -26,6 +26,9 @@ namespace NicoPasino.Controllers
             catch (DataException ex) {
                 return BadRequest(new { message = ex.Message }); // 400
             }
+            catch (ArgumentException ex) {
+                return BadRequest(new { message = ex.Message }); // 400
+            }
             catch (Exception ex) {
                 return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
             }

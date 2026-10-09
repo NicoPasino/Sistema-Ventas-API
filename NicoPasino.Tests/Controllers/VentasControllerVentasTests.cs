@@ -18,14 +18,9 @@ namespace NicoPasino.Tests.Controllers;
 /// Tests de los 5 endpoints activos de <c>Ventas.Ventas.cs</c> (#28). El
 /// <c>PUT Ventas</c> esta comentado en el controller, asi que no se prueba.
 /// <para>
-/// Los dos endpoints rotos que este archivo documenta:
-/// <list type="bullet">
-///   <item><description><c>GET Ventas/{id}</c> nunca devuelve 404
-///   (<see cref="BugsConocidos.IssueVentaGetByIdNunca404"/>);</description></item>
-///   <item><description><c>DELETE Ventas/{id}</c> siempre devuelve 500 porque
-///   <c>VentaServicio.Enable</c> lanza <c>NotImplementedException</c>
-///   (<see cref="BugsConocidos.IssueEliminarVentaSiempre500"/>).</description></item>
-/// </list>
+/// <c>DELETE Ventas/{id}</c> responde 501 Not Implemented porque
+/// <c>VentaServicio.Enable</c> lanza <c>NotImplementedException</c> (la tabla
+/// <c>venta</c> no tiene columna <c>activo</c>).
 /// </para>
 /// </summary>
 public class VentasControllerVentasTests
@@ -102,9 +97,24 @@ public class VentasControllerVentasTests
         resultado.Prop("message").Should().Be("Campo de búsqueda 'x' no soportado.");
     }
 
-    /// <summary>Caracteriza el bug #36 en el endpoint de ventas: 500 en vez de 400.</summary>
+    /// <summary>Con el campo vacio el servicio lanza <c>DataException</c> -> 400 (#36).</summary>
     [Fact]
-    public async Task Search_con_campo_vacio_devuelve_500_en_vez_de_400__BUG_ArgumentException_no_catcheada()
+    public async Task Search_con_campo_vacio_devuelve_400()
+    {
+        var h = new VentasControllerHarness();
+        h.ServicioVenta.GetAll(Arg.Any<string>(), Arg.Any<string?>())
+            .Returns(Task.FromException<IEnumerable<VentaDetalleDto>>(
+                new DataException("Campo de búsqueda no válido.")));
+
+        var resultado = await h.Controller.GetAllVentas("", null);
+
+        resultado.Estado().Should().Be(400);
+        resultado.Prop("message").Should().Be("Campo de búsqueda no válido.");
+    }
+
+    /// <summary>Red de seguridad (#36): un <c>ArgumentException</c> tambien responde 400.</summary>
+    [Fact]
+    public async Task Search_con_ArgumentException_devuelve_400()
     {
         var h = new VentasControllerHarness();
         h.ServicioVenta.GetAll(Arg.Any<string>(), Arg.Any<string?>())
@@ -113,7 +123,7 @@ public class VentasControllerVentasTests
 
         var resultado = await h.Controller.GetAllVentas("", null);
 
-        resultado.Estado().Should().Be(500, BugsConocidos.BusquedaConCampoVacioDevuelve500);
+        resultado.Estado().Should().Be(400);
     }
 
     // =============================================================== GET Ventas/{id}
@@ -130,19 +140,19 @@ public class VentasControllerVentasTests
     }
 
     /// <summary>
-    /// Caracteriza el bug #38: el <c>NotFound</c> esta comentado y <c>GetById</c>
-    /// devuelve un DTO vacio, asi que nunca se responde 404.
+    /// El servicio devuelve <c>null</c> cuando la venta no existe, asi que la rama
+    /// <c>NotFound</c> responde 404 (#38).
     /// </summary>
     [Fact]
-    public async Task GetVenta_inexistente_devuelve_200_y_nunca_404__BUG_rama_404_comentada()
+    public async Task GetVenta_inexistente_devuelve_404()
     {
         var h = new VentasControllerHarness();
-        h.ServicioVenta.GetById(9999).Returns(new VentaDetalleDto());
+        h.ServicioVenta.GetById(9999).Returns(Task.FromResult<VentaDetalleDto>(null!));
 
         var resultado = await h.Controller.GetVenta(9999);
 
-        resultado.Estado().Should().Be(200, BugsConocidos.VentaGetByIdNuncaDevuelve404);
-        resultado.Should().NotBeOfType<NotFoundObjectResult>();
+        resultado.Estado().Should().Be(404);
+        resultado.Should().BeOfType<NotFoundObjectResult>();
     }
 
     // ================================================================ POST Ventas
@@ -235,12 +245,12 @@ public class VentasControllerVentasTests
     // ============================================================= DELETE Ventas
 
     /// <summary>
-    /// Caracteriza el bug #37 con el <c>VentaServicio</c> <b>real</b>: <c>Enable</c>
-    /// lanza <c>NotImplementedException</c> y el controller la traduce a 500. No hay
-    /// forma de obtener un 200 en este endpoint.
+    /// Con el <c>VentaServicio</c> <b>real</b>: <c>Enable</c> lanza
+    /// <c>NotImplementedException</c> porque la tabla <c>venta</c> no tiene columna
+    /// <c>activo</c>, y el controller la traduce a 501 Not Implemented (#37).
     /// </summary>
     [Fact]
-    public async Task Eliminar_siempre_devuelve_500_porque_Enable_no_esta_implementado__BUG()
+    public async Task Eliminar_devuelve_501_porque_Enable_no_esta_implementado()
     {
         var repoVenta = new RepositorioGenericoVentasFake<Venta>();
         var repoCliente = new RepositorioGenericoVentasFake<Cliente>();
@@ -261,8 +271,9 @@ public class VentasControllerVentasTests
 
         var resultado = await controller.EliminarVenta(1);
 
-        resultado.Estado().Should().Be(500, BugsConocidos.EliminarVentaSiempreDevuelve500);
-        resultado.Cuerpo().Should().Be("Error de servidor: StatusCode 500");
+        resultado.Estado().Should().Be(501);
+        resultado.Prop("message").Should().Be(
+            "La baja de ventas no está implementada: la tabla 'venta' no tiene columna 'activo'.");
     }
 
     [Fact]

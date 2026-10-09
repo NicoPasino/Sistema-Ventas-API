@@ -171,7 +171,7 @@ public class ClienteServicioLecturaTests
     {
         var (servicio, repo) = CrearCon();
 
-        var excepcion = await Assert.ThrowsAsync<ArgumentException>(() => servicio.GetAll(campo!, "valor"));
+        var excepcion = await Assert.ThrowsAsync<DataException>(() => servicio.GetAll(campo!, "valor"));
 
         excepcion.Message.Should().Contain("Campo de búsqueda no válido.");
         repo.VecesListar.Should().Be(0);
@@ -410,25 +410,17 @@ public class ClienteServicioLecturaTests
     }
 
     /// <summary>
-    /// Caracteriza que un documento inexistente devuelve un
-    /// <c>ClienteDto</c> vacio en vez de <c>null</c> o una excepcion. El controller
-    /// no puede distinguir "no existe" de "existe y todos sus campos estan vacios", y
-    /// un <c>Documento = 0</c> tampoco pasa la validacion de 8 digitos si el cliente
-    /// lo reenvia. Mismo patron que <c>ProductoServicio.GetById</c> y
-    /// <c>VentaServicio.GetById</c>.
-    /// Referencia: bug #35.
+    /// Un documento inexistente devuelve <c>null</c>, para que el controller pueda
+    /// distinguir "no existe" y responder 404 (#35).
     /// </summary>
     [Fact]
-    public async Task GetById_inexistente_devuelve_un_DTO_vacio_en_vez_de_null()
+    public async Task GetById_inexistente_devuelve_null()
     {
         var (servicio, _) = CrearCon(Cliente(1, 30111222, "Ana Gomez"));
 
         var resultado = await servicio.GetById(33111222);
 
-        resultado.Should().NotBeNull();
-        resultado.Documento.Should().Be(0, "el DTO por defecto tiene todo en cero");
-        resultado.Nombre.Should().BeNull();
-        resultado.Correo.Should().BeNull();
+        resultado.Should().BeNull();
     }
 
     [Fact]

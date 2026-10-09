@@ -26,6 +26,9 @@ namespace NicoPasino.Controllers
             catch (DataException ex) {
                 return BadRequest(new { message = ex.Message }); // 400
             }
+            catch (ArgumentException ex) {
+                return BadRequest(new { message = ex.Message }); // 400
+            }
             catch (Exception ex) {
                 return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
             }
@@ -35,8 +38,11 @@ namespace NicoPasino.Controllers
         public async Task<ActionResult> GetVenta(int id) {
             try {
                 var obj = await _ventaServicio.GetById(id);
-                return Ok(obj);
-                //return NotFound(new { mensaje = "Producto no encontrado" }); // 404
+                if (obj != null) return Ok(obj);
+                else return NotFound(new { message = "Venta no encontrada" }); // 404
+            }
+            catch (DataException ex) {
+                return BadRequest(new { message = ex.Message }); // 400
             }
             catch (Exception ex) {
                 return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
@@ -68,6 +74,9 @@ namespace NicoPasino.Controllers
             try {
                 var res = await _ventaServicio.Enable(id, false);
                 return Ok(new { success = true });
+            }
+            catch (NotImplementedException ex) {
+                return StatusCode(StatusCodes.Status501NotImplemented, new { message = ex.Message }); // 501
             }
             catch (Exception ex) {
                 return new ObjectResult("Error de servidor: StatusCode 500") { StatusCode = 500 };
