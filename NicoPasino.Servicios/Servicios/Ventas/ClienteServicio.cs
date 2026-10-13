@@ -12,11 +12,14 @@ namespace NicoPasino.Servicios.Servicios.Ventas
     {
         private readonly IRepositorioGenericoVentas<Cliente> _repoG;
         private readonly ClienteValidador _validador;
+        private readonly TimeProvider _reloj;
 
         public ClienteServicio(IRepositorioGenericoVentas<Cliente> repoG,
-                               ClienteValidador validador) {
+                               ClienteValidador validador,
+                               TimeProvider? reloj = null) {
             _repoG = repoG ?? throw new ArgumentNullException(nameof(repoG));
             _validador = validador ?? throw new ArgumentNullException(nameof(validador));
+            _reloj = reloj ?? TimeProvider.System;
         }
 
         public async Task<IEnumerable<ClienteDto>> GetAll(bool activo) {
@@ -112,7 +115,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
 
             var objeto = obj.Adapt<Cliente>();
             objeto.Activo = true;
-            objeto.FechaCreacion = DateTime.UtcNow;
+            objeto.FechaCreacion = _reloj.GetUtcNow().UtcDateTime;
             objeto.Telefono = obj.Telefono;
             var res = await _repoG.Add(objeto);
 

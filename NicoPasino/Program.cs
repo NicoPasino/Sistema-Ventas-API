@@ -6,6 +6,7 @@ using NicoPasino.Core.Mapper;
 using NicoPasino.Core.Modelos.Ventas;
 using NicoPasino.Infra.Data;
 using NicoPasino.Infra.Repositorio;
+using NicoPasino.Servicios.Servicios;
 using NicoPasino.Servicios.Servicios.Ventas;
 using NicoPasino.Servicios.Validaciones;
 using System.Threading.RateLimiting;
@@ -46,6 +47,10 @@ namespace NicoPasino
 
             // permitir inyeccion (Repositorio => conexion con dbContext)
             builder.Services.AddScoped(typeof(IRepositorioGenericoVentas<>), typeof(RepositorioGenericoVentas<>));
+
+            // reloj inyectable y generador de codigos (testeables)
+            builder.Services.AddSingleton(TimeProvider.System);
+            builder.Services.AddSingleton<IGeneradorCodigos, GeneradorCodigos>();
 
             // Servicios
             builder.Services.AddScoped<IServicioGenerico<Producto, ProductoDto, ProductoDto>, ProductoServicio>();

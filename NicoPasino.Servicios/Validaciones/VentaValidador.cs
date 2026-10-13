@@ -14,11 +14,14 @@ namespace NicoPasino.Servicios.Validaciones
 
         private readonly IRepositorioGenericoVentas<Cliente> _repoCliente;
         private readonly IRepositorioGenericoVentas<Producto> _repoProducto;
+        private readonly TimeProvider _reloj;
 
         public VentaValidador(IRepositorioGenericoVentas<Cliente> repoCliente,
-                              IRepositorioGenericoVentas<Producto> repoProducto) {
+                              IRepositorioGenericoVentas<Producto> repoProducto,
+                              TimeProvider? reloj = null) {
             _repoCliente = repoCliente ?? throw new ArgumentNullException(nameof(repoCliente));
             _repoProducto = repoProducto ?? throw new ArgumentNullException(nameof(repoProducto));
+            _reloj = reloj ?? TimeProvider.System;
         }
 
         public void NormalizarYValidar(VentaDto obj) {
@@ -74,7 +77,7 @@ namespace NicoPasino.Servicios.Validaciones
 
         public void ValidarFecha(DateTime? fechaVenta) {
             if (!fechaVenta.HasValue) return;
-            if (fechaVenta.Value > DateTime.UtcNow)
+            if (fechaVenta.Value > _reloj.GetUtcNow().UtcDateTime)
                 throw new DataException("La fecha de la venta no puede ser futura.");
         }
 

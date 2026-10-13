@@ -11,23 +11,31 @@ namespace NicoPasino.Servicios.Servicios.Ventas
     public class VentaServicio : IServicioGenerico<Venta, VentaDto, VentaDetalleDto>
     {
         // TODO: usar uow?
+        private const int IntentosNumero = 10;
+
         private readonly IRepositorioGenericoVentas<Venta> _repoG;
         private readonly IRepositorioGenericoVentas<Cliente> _repoCliente;
         private readonly IRepositorioGenericoVentas<Producto> _repoProducto;
         private readonly IRepositorioGenericoVentas<Ventaporproducto> _repoVpp;
         private readonly VentaValidador _validador;
+        private readonly TimeProvider _reloj;
+        private readonly IGeneradorCodigos _generador;
 
         public VentaServicio(
             IRepositorioGenericoVentas<Venta> repoG,
             IRepositorioGenericoVentas<Cliente> repoCliente,
             IRepositorioGenericoVentas<Producto> repoProducto,
             IRepositorioGenericoVentas<Ventaporproducto> repoVpp,
-            VentaValidador validador) {
+            VentaValidador validador,
+            TimeProvider? reloj = null,
+            IGeneradorCodigos? generador = null) {
             _repoG = repoG ?? throw new ArgumentNullException(nameof(repoG));
             _repoCliente = repoCliente ?? throw new ArgumentNullException(nameof(repoCliente));
             _repoProducto = repoProducto ?? throw new ArgumentNullException(nameof(repoProducto));
             _repoVpp = repoVpp ?? throw new ArgumentNullException(nameof(repoVpp));
             _validador = validador ?? throw new ArgumentNullException(nameof(validador));
+            _reloj = reloj ?? TimeProvider.System;
+            _generador = generador ?? new GeneradorCodigos();
         }
 
         public async Task<IEnumerable<VentaDetalleDto>> GetAll(bool activo) {
@@ -117,7 +125,6 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         }
 
         public async Task<bool> Create(VentaDto obj) {
-            Random random = new();
             _validador.NormalizarYValidar(obj);
 
             // Verificar Cliente (los ítems referencian IdCliente, no el DNI)
@@ -132,9 +139,9 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             var venta = new Venta
             {
                 IdCliente = obj.IdCliente,
-                Numero = random.Next(1, 9999999),
+                Numero = await GenerarNumeroUnicoAsync(),
                 Detalle = obj.Detalle,
-                FechaVenta = obj.FechaVenta ?? DateTime.UtcNow
+                FechaVenta = obj.FechaVenta ?? _reloj.GetUtcNow().UtcDateTime
             };
 
             // Guardar venta
@@ -199,6 +206,15 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             var res = await _repoG.Update(objDb);
             if (res > 0) return true;
             else throw new UpdateException("No se pudo actualizar en la base de datos.");
+        }
+
+        private async Task<int> GenerarNumeroUnicoAsync() {
+            for (int i = 0; i < IntentosNumero; i++) {
+                var numero = _generador.Siguiente(1, 9999999);
+                var existente = await _repoG.GetAsync(filtro: v => v.Numero == numero);
+                if (existente == null) return numero;
+            }
+            throw new DataException("No se pudo generar un número único para la venta, reintentar.");
         }
 
         public Task<bool> Enable(int id, bool estado) {

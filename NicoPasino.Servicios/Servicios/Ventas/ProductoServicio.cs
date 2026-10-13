@@ -14,11 +14,17 @@ namespace NicoPasino.Servicios.Servicios.Ventas
 
         private readonly IRepositorioGenericoVentas<Producto> _repoG;
         private readonly ProductoValidador _validador;
+        private readonly TimeProvider _reloj;
+        private readonly IGeneradorCodigos _generador;
 
         public ProductoServicio(IRepositorioGenericoVentas<Producto> repoG,
-                                 ProductoValidador validador) {
+                                 ProductoValidador validador,
+                                 TimeProvider? reloj = null,
+                                 IGeneradorCodigos? generador = null) {
             _repoG = repoG ?? throw new ArgumentNullException(nameof(repoG));
             _validador = validador ?? throw new ArgumentNullException(nameof(validador));
+            _reloj = reloj ?? TimeProvider.System;
+            _generador = generador ?? new GeneradorCodigos();
         }
 
         public async Task<IEnumerable<ProductoDto>> GetAll(bool activo) {
@@ -128,8 +134,8 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             obj.IdPublica = await GenerarIdPublicaUnicoAsync();
             var objeto = obj.Adapt<Producto>();
 
-            objeto.FechaCreacion = DateTime.UtcNow;
-            objeto.FechaModificacion = DateTime.UtcNow;
+            objeto.FechaCreacion = _reloj.GetUtcNow().UtcDateTime;
+            objeto.FechaModificacion = _reloj.GetUtcNow().UtcDateTime;
             objeto.Activo = true;
 
             // Asegurar que se use sólo la FK y evitar que EF intente insertar una nueva Categoria
@@ -171,7 +177,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
 
             objMapped.Id = objDb.Id;
             objMapped.FechaCreacion = objDb.FechaCreacion;
-            objMapped.FechaModificacion = DateTime.UtcNow;
+            objMapped.FechaModificacion = _reloj.GetUtcNow().UtcDateTime;
 
             // Subir
             var res = await _repoG.Update(objMapped);
@@ -238,7 +244,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
             }
             if (obj.Activo.HasValue) objDb.Activo = obj.Activo.Value;
 
-            objDb.FechaModificacion = DateTime.UtcNow;
+            objDb.FechaModificacion = _reloj.GetUtcNow().UtcDateTime;
 
             var res = await _repoG.Update(objDb);
             if (res > 0) return true;
@@ -247,7 +253,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
 
         private async Task<int?> GenerarIdPublicaUnicoAsync() {
             for (int i = 0; i < IntentosIdPublica; i++) {
-                var idPublica = Random.Shared.Next(1, 9999999);
+                var idPublica = _generador.Siguiente(1, 9999999);
                 var existente = await _repoG.GetAsync(filtro: p => p.IdPublica == idPublica);
                 if (existente == null) return idPublica;
             }
