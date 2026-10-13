@@ -22,23 +22,18 @@ namespace NicoPasino.Servicios.Servicios.Ventas
         }
 
         public async Task<IEnumerable<ProductoDto>> GetAll(bool activo) {
-            try {
-                var objsDb = await _repoG.ListarAsync(
-                    //filtro: m => m.Activo == activo // Se filtra desde Front.
-                    orden: q => q.OrderByDescending(m => m.FechaModificacion)
-                    , incluir: "IdCategoriaNavigation"
-                );
+            var objsDb = await _repoG.ListarAsync(
+                //filtro: m => m.Activo == activo // Se filtra desde Front.
+                orden: q => q.OrderByDescending(m => m.FechaModificacion)
+                , incluir: "IdCategoriaNavigation"
+            );
 
-                // si hay...
-                if (objsDb != null && objsDb.Any()) {
-                    var objsDto = objsDb.Adapt<IEnumerable<ProductoDto>>();
-                    return objsDto;
-                }
-                return Enumerable.Empty<ProductoDto>();
+            // si hay...
+            if (objsDb != null && objsDb.Any()) {
+                var objsDto = objsDb.Adapt<IEnumerable<ProductoDto>>();
+                return objsDto;
             }
-            catch (Exception ex) {
-                throw new Exception(ex.Message);
-            }
+            return Enumerable.Empty<ProductoDto>();
         }
 
         public async Task<IEnumerable<ProductoDto>> GetAll(string campo, string? valor) {
