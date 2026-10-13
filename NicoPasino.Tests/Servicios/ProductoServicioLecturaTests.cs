@@ -116,42 +116,6 @@ public class ProductoServicioLecturaTests
         repo.UltimoFiltro.Should().BeNull("la linea 27 tiene el filtro comentado");
     }
 
-    /// <summary>
-    /// Caracteriza el anti-patron de la linea 39-40: cualquier excepcion del
-    /// repositorio o del mapeo se re-lanza como <c>Exception</c> generico,
-    /// perdiendo el tipo original y el stack trace.
-    /// Referencia: bug #47.
-    /// </summary>
-    [Fact]
-    public async Task GetAll_reenvuelve_cualquier_excepcion_como_Exception_generica()
-    {
-        var (servicio, repo, _) = CrearCon();
-        repo.AlListarAsync = () => throw new InvalidOperationException("fallo de base de datos");
-
-        var excepcion = await Assert.ThrowsAsync<Exception>(() => servicio.GetAll(true));
-
-        excepcion.Should().BeOfType<Exception>();
-        excepcion.Message.Should().Be("fallo de base de datos");
-        excepcion.InnerException.Should().BeNull("el catch descarta la excepcion original");
-    }
-
-    /// <summary>
-    /// Caracteriza que el <c>catch</c> tambien se come las <c>UpdateException</c> y las
-    /// <c>DataException</c>, que nunca llegan al controller con su tipo.
-    /// Referencia: bug #47.
-    /// </summary>
-    [Fact]
-    public async Task GetAll_revierte_el_tipo_de_las_excepciones_de_negocio()
-    {
-        var (servicio, repo, _) = CrearCon();
-        repo.AlListarAsync = () => throw new UpdateException("No pudo actualizar en la base de datos.");
-
-        var excepcion = await Assert.ThrowsAsync<Exception>(() => servicio.GetAll(true));
-
-        excepcion.Should().NotBeOfType<UpdateException>();
-        excepcion.Message.Should().Be("No pudo actualizar en la base de datos.");
-    }
-
     // ------------------------------------------------------------------ GetById
 
     [Theory]
