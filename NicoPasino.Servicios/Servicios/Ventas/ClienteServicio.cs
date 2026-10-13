@@ -53,8 +53,7 @@ namespace NicoPasino.Servicios.Servicios.Ventas
                         : new Func<IQueryable<Cliente>, IOrderedQueryable<Cliente>>(q => q.OrderByDescending(m => m.Documento));
 
                     if (!valorIsNull) {
-                        filtro = m => m.Documento != null
-                                    && m.Documento.ToString().Contains(vLower);
+                        filtro = m => m.Documento.ToString().Contains(vLower);
                     }
                     break;
 
