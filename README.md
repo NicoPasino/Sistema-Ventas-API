@@ -1,172 +1,374 @@
-# 📌 API Sistema-Ventas (demo)
-FrontEnd Repo: [Sistema-Ventas](https://github.com/NicoPasino/sistema-ventas)
+# API Sistema de Ventas
 
-## 🛠️ Tecnologías utilizadas:
-- Herramientas: `.NET`.
-- Lenguajes: `C#`.
-- Frameworks: `Entity Framework`, `ASP.NET`.
-- Base de datos: `MySql`.
-- Estructura: `The Clean Architecture`.
-- Tests: `xUnit`, `FluentAssertions`, `NSubstitute`, `coverlet`.
+[![Tests](https://github.com/NicoPasino/Sistema-Ventas-API/actions/workflows/tests.yml/badge.svg)](https://github.com/NicoPasino/Sistema-Ventas-API/actions/workflows/tests.yml)
+[![.NET](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1)](https://www.mysql.com/)
 
+API REST para la gestión de ventas: productos, categorías, clientes y ventas.
+Implementada en **.NET 9 / C#** con **Entity Framework Core + MySQL**, separada en
+capas (Clean Architecture) y cubierta por una suite de tests unitarios.
 
-## 📦 Estructura principal del proyecto
-```bash
-├───NicoPasino #(Host web: controladores y arranque)
-│   ├─── Controllers
-│   │     ├─ VentasController.cs      (base: inyección de dependencias)
-│   │     ├─ Ventas.Clientes.cs
-│   │     ├─ Ventas.Productos.cs      (+ endpoints de Categorías)
-│   │     └─ Ventas.Ventas.cs
-│   └─── Program.cs                   (DI, CORS, rate limiting, Mapster, EF)
-│
-├───NicoPasino.Core #(Modelos, DTOs, interfaces y errores)
-│   ├─── DTO/Ventas
-│   ├─── Errores                     (DataException, UpdateException, …)
-│   ├─── Interfaces
-│   ├─── Mapper                       (MappingConfig: Mapster)
-│   └─── Modelos/Ventas
-│
-├───NicoPasino.Infra #(EF Core + MySQL)
-│   ├─── Data                         (ventasdbContext)
-│   ├─── Migrations
-│   └─── Repositorio                  (RepositorioGenericoVentas<T>)
-│
-├───NicoPasino.Servicios #(Lógica de Negocio)
-│   ├─── Servicios/Ventas             (Producto, Cliente, Venta, Categoria)
-│   └─── Validaciones                 (Producto, Cliente, Venta)
-│
-└───NicoPasino.Tests #(Tests unitarios)
-    ├─── Common
-    │     ├─ Fakes                    (RepositorioGenericoVentasFake<T>)
-    │     ├─ Builders                 (Entidades + DTOs)
-    │     ├─ BugsConocidos.cs         (catálogo de bugs caracterizados)
-    │     ├─ VentasControllerHarness.cs
-    │     ├─ ResultadoHttp.cs
-    │     └─ InicializadorMapster.cs
-    ├─── Validadores                  (validadores y DataAnnotations de DTOs)
-    ├─── Servicios                    (un archivo por servicio/método)
-    ├─── Controllers                  (endpoints de VentasController)
-    └─── Infraestructura              (fake + repositorio real con EF InMemory)
+> Frontend: [NicoPasino/sistema-ventas](https://github.com/NicoPasino/sistema-ventas)
+
+## Contenido
+
+- [Características](#características)
+- [Stack](#stack)
+- [Arquitectura](#arquitectura)
+- [Requisitos](#requisitos)
+- [Puesta en marcha](#puesta-en-marcha)
+- [Endpoints](#endpoints)
+- [Búsqueda y filtros](#búsqueda-y-filtros)
+- [Ejemplos de uso](#ejemplos-de-uso)
+- [Comportamiento transversal](#comportamiento-transversal)
+- [Tests](#tests)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Autor](#autor)
+
+## Características
+
+- CRUD de productos y clientes con **baja lógica** mediante `PATCH { "activo": bool }`.
+- Registro de ventas con validación de cliente, productos, stock y descuento automático.
+- Búsqueda y ordenamiento por campos (`numero`, `nombre`, `otro`, `proveedor`, …).
+- DTOs de entrada/salida separados de las entidades, con mapeo vía **Mapster**.
+- Validación en dos capas: **DataAnnotations** en los DTOs y validadores de negocio.
+- Errores de negocio como `400`, recursos inexistentes como `404` y JSON consistente.
+- CORS configurable, **rate limiting** y cabeceras de seguridad.
+- **732 tests** unitarios/de integración.
+
+## Stack
+
+| Categoría | Tecnología |
+|---|---|
+| Runtime | .NET 9 (`net9.0`) |
+| Framework web | ASP.NET Core |
+| Acceso a datos | Entity Framework Core 9 + Pomelo MySQL |
+| Base de datos | MySQL 8.0 |
+| Mapeo | Mapster |
+| Configuración | `dotenv.net` (archivo `.env`) |
+| Tests | xUnit, FluentAssertions, NSubstitute, EF Core InMemory, WebApplicationFactory, coverlet |
+| CI | GitHub Actions (`dotnet restore` → `build` → `test` + cobertura) |
+
+## Arquitectura
+
+El proyecto sigue una separación por capas con dependencias unidireccionales:
+
+```
+NicoPasino (Web / API)
+    ├── NicoPasino.Servicios (lógica de negocio + validaciones)
+    │        └── NicoPasino.Infra (EF Core + MySQL) ──┐
+    └── NicoPasino.Core (modelos, DTOs, interfaces) ◄─┘
 ```
 
-## 📦 Endpoints
-Todos cuelgan de `/api/ventas` (`[Route("api/[controller]")]`).
+| Proyecto | Responsabilidad |
+|---|---|
+| `NicoPasino` | Host web: `Program.cs`, controladores, CORS, rate limiting, middleware de errores y seguridad. |
+| `NicoPasino.Servicios` | Reglas de negocio (`ProductoServicio`, `ClienteServicio`, `VentaServicio`, `CategoriaServicio`) y validadores. |
+| `NicoPasino.Infra` | `ventasdbContext`, migraciones EF Core y `RepositorioGenericoVentas<T>`. |
+| `NicoPasino.Core` | Entidades, DTOs, interfaces (`IServicioGenerico`, `IRepositorioGenericoVentas`), errores y configuración de Mapster. |
+| `NicoPasino.Tests` | Suite de tests y utilidades (builders, fakes, harness de controllers). |
 
-```bash
-productos/...
-│   ├─── (GET)                       Trae todos los productos
-│   ├─── (GET /{idPublica})          Trae un producto por su id público
-│   ├─── (GET /search/{campo}/{valor?}) Busca por campo (numero, nombre, otro, proveedor) y valor
-│   ├─── (POST)                      Agrega un producto
-│   ├─── (PUT)                       Modifica un producto
-│   └─── (PATCH /{idPublica})        Modifica campos sueltos; { "activo": bool } habilita/deshabilita
-|
-clientes/...
-│   ├─── (GET)                       Trae todos los clientes
-│   ├─── (GET /{id})                 Trae un cliente por documento
-│   ├─── (GET /search/{campo}/{valor?}) Busca por campo (numero, nombre, otro) y valor
-│   ├─── (POST)                      Agrega un cliente
-│   ├─── (PUT)                       Modifica un cliente
-│   └─── (PATCH /{id})               Modifica campos sueltos; { "activo": bool } habilita/deshabilita
-|
-ventas/...
-│   ├─── (GET)                       Trae todas las ventas
-│   ├─── (GET /{id})                 Trae una venta (VentaDetalleDto)
-│   ├─── (GET /search/{campo}/{valor?}) Busca por campo (numero, nombre, otro) y valor
-│   └─── (POST)                      Agrega una venta
-|
-categorias/...
-    ├─── (GET)                       Trae todas las categorías
-    └─── (GET /{id})                 Trae una categoría
+## Requisitos
+
+- [.NET 9 SDK](https://dotnet.microsoft.com/download)
+- MySQL 8.0 en ejecución (probado con 8.0.39)
+- Git
+
+## Puesta en marcha
+
+1. **Clonar el repositorio**
+
+   ```bash
+   git clone https://github.com/NicoPasino/Sistema-Ventas-API.git
+   cd Sistema-Ventas-API
+   ```
+
+2. **Configurar variables de entorno**
+
+   Creá `NicoPasino/.env` a partir del ejemplo:
+
+   ```bash
+   cp NicoPasino/.env.example NicoPasino/.env
+   ```
+
+   | Variable | Obligatoria | Descripción |
+   |---|---|---|
+   | `ventas` | Sí | Cadena de conexión de MySQL (sin ella la app falla al iniciar). |
+   | `ACCEPTED_ORIGINS` | No | Orígenes permitidos por CORS, separados por coma. |
+
+   ```env
+   ventas=Server=localhost;Port=3306;Database=ventas;Uid=root;Pwd=tu_password;
+   ACCEPTED_ORIGINS=http://localhost:4200,http://localhost:5173
+   ```
+
+3. **Restaurar, compilar y ejecutar**
+
+   ```bash
+   dotnet restore
+   dotnet build
+   dotnet run --project NicoPasino
+   ```
+
+   La API queda disponible en `http://localhost:5230` (perfil `http`) y
+   `https://localhost:7267` (perfil `https`), según `launchSettings.json`.
+
+4. **Base de datos y migraciones**
+
+   La aplicación **no aplica migraciones automáticamente**. Las migraciones están en
+   `NicoPasino.Infra/Migrations` y podés aplicarlas con:
+
+   ```bash
+   dotnet tool restore
+   dotnet ef database update --project NicoPasino.Infra --startup-project NicoPasino
+   ```
+
+   Asegurate de que la variable `ventas` esté disponible en el entorno al ejecutar EF.
+
+## Endpoints
+
+Todos los endpoints cuelgan de `/api/Ventas` (el routing de ASP.NET Core no distingue
+mayúsculas/minúsculas).
+
+### Productos
+
+| Método | Ruta | Descripción | Respuestas |
+|---|---|---|---|
+| `GET` | `/api/Ventas/Productos` | Lista todos los productos (con categoría). | `200`, `500` |
+| `GET` | `/api/Ventas/Productos/search/{campo}/{valor?}` | Busca/ordena productos por campo. | `200`, `400`, `500` |
+| `GET` | `/api/Ventas/Productos/{idPublica}` | Obtiene un producto por su **id público**. | `200`, `400`, `404`, `500` |
+| `POST` | `/api/Ventas/Productos` | Crea un producto. | `202`, `400`, `500` |
+| `PUT` | `/api/Ventas/Productos` | Modifica un producto completo. | `202`, `400`, `500` |
+| `PATCH` | `/api/Ventas/Productos/{idPublica}` | Modifica campos sueltos; `activo` habilita/deshabilita. | `202`, `400`, `500` |
+
+### Clientes
+
+| Método | Ruta | Descripción | Respuestas |
+|---|---|---|---|
+| `GET` | `/api/Ventas/Clientes` | Lista todos los clientes (con cantidad de compras). | `200`, `500` |
+| `GET` | `/api/Ventas/Clientes/search/{campo}/{valor?}` | Busca/ordena clientes por campo. | `200`, `400`, `500` |
+| `GET` | `/api/Ventas/Clientes/{documento}` | Obtiene un cliente por su **documento (DNI)**. | `200`, `400`, `404`, `500` |
+| `POST` | `/api/Ventas/Clientes` | Crea un cliente. | `200`, `400`, `500` |
+| `PUT` | `/api/Ventas/Clientes` | Modifica un cliente completo. | `200`, `400`, `500` |
+| `PATCH` | `/api/Ventas/Clientes/{documento}` | Modifica campos sueltos; `activo` habilita/deshabilita. | `200`, `400`, `500` |
+
+### Ventas
+
+| Método | Ruta | Descripción | Respuestas |
+|---|---|---|---|
+| `GET` | `/api/Ventas/Ventas` | Lista todas las ventas con su detalle. | `200`, `500` |
+| `GET` | `/api/Ventas/Ventas/search/{campo}/{valor?}` | Busca/ordena ventas por campo. | `200`, `400`, `500` |
+| `GET` | `/api/Ventas/Ventas/{id}` | Obtiene una venta por su **id interno**. | `200`, `400`, `404`, `500` |
+| `POST` | `/api/Ventas/Ventas` | Registra una venta y descuenta stock. | `200`, `400`, `500` |
+
+> `PUT /api/Ventas/Ventas` está comentado en el código y **no existe** en la práctica.
+
+### Categorías
+
+| Método | Ruta | Descripción | Respuestas |
+|---|---|---|---|
+| `GET` | `/api/Ventas/Categorias` | Lista todas las categorías. | `200`, `500` |
+| `GET` | `/api/Ventas/Categorias/{id}` | Obtiene una categoría por id. | `200`, `400`, `404`, `500` |
+
+### Notas
+
+- **No existe `DELETE` en ningún recurso**: no hay baja física. Un `DELETE` responde
+  `405 Method Not Allowed`.
+- La baja lógica de productos y clientes se hace únicamente con
+  `PATCH { "activo": false }`.
+- `IServicioGenerico.Enable(...)` queda como contrato, pero lanza
+  `NotImplementedException` en todos los servicios.
+- Los errores de validación/negocio devuelven `{ "message": "..." }`.
+
+## Búsqueda y filtros
+
+`GET /api/Ventas/{recurso}/search/{campo}/{valor?}`. El `campo` no distingue
+mayúsculas/minúsculas. Si se omite `valor`, solo se aplica el ordenamiento.
+
+| Recurso | Campo | Filtra por | Orden |
+|---|---|---|---|
+| Productos | `numero` | id público | id ascendente |
+| Productos | `nombre` / `nombredesc` | nombre | nombre asc/desc |
+| Productos | `otro` / `otrodesc` | nombre de categoría | categoría asc/desc |
+| Productos | `proveedor` / `proveedordesc` | proveedor | proveedor asc/desc |
+| Clientes | `numero` / `numerodesc` | documento | documento asc/desc |
+| Clientes | `nombre` / `nombredesc` | nombre | nombre asc/desc |
+| Clientes | `otro` / `otrodesc` | correo | correo asc/desc |
+| Ventas | `numero` | número de venta | número ascendente |
+| Ventas | `nombre` / `nombredesc` | nombre del cliente | cliente asc/desc |
+| Ventas | `otro` / `otrodesc` | detalle | detalle asc/desc |
+
+Un campo no soportado devuelve `400` con el listado de campos válidos. En productos,
+cuando se envía `valor`, la búsqueda solo considera productos activos.
+
+## Ejemplos de uso
+
+### Crear un producto
+
+```http
+POST /api/Ventas/Productos
+Content-Type: application/json
 ```
 
-**No existe `DELETE` en ningún recurso: no hay baja física.** Un `DELETE` sobre
-`productos/{id}`, `clientes/{id}` o `ventas/{id}` responde `405 Method Not Allowed`.
-El estado (habilitado/deshabilitado) de productos y clientes se cambia únicamente
-con `PATCH { "activo": bool }`; `Enable` queda como contrato de `IServicioGenerico`
-y lanza `NotImplementedException` (igual que en ventas y categorías).
+```json
+{
+  "idCategoria": 1,
+  "nombre": "Teclado mecánico",
+  "descripcion": "Switch brown",
+  "cantidad": 25,
+  "precio": 54999.90,
+  "stockMinimo": 5,
+  "stockMaximo": 50,
+  "proveedor": "Logitech"
+}
+```
 
-Detalle: en `productos` el `{idPublica}` es el número expuesto al front
-(no la PK interna); en `clientes` el `{id}` es el documento. En `ventas` el
-`PUT` está **comentado** en el código y no existe en la ruta.
+El servidor genera `idPublica`, asigna `activo = true` y completa las fechas.
 
-## 🧪 Tests
+### Deshabilitar un producto
 
-Los tests unitarios viven en `NicoPasino.Tests` y usan **xUnit** + **FluentAssertions**
-(+ **NSubstitute** y **EF Core InMemory**). No levantan base de datos ni el servidor web:
-los repositorios se reemplazan por un fake in-memory que evalúa los filtros y el orden
-con LINQ to Objects; el repositorio real `RepositorioGenericoVentas<T>` se prueba contra
-un contexto EF Core InMemory. La suite corre en CI vía `.github/workflows/tests.yml`.
+```http
+PATCH /api/Ventas/Productos/1234567
+Content-Type: application/json
+```
+
+```json
+{ "activo": false }
+```
+
+### Crear un cliente
+
+```json
+{
+  "nombre": "Ana Gómez",
+  "correo": "ana@example.com",
+  "documento": 30111222,
+  "telefono": "+54 11 5555-5555"
+}
+```
+
+### Registrar una venta
+
+```http
+POST /api/Ventas/Ventas
+Content-Type: application/json
+```
+
+```json
+{
+  "dni": 30111222,
+  "detalle": "Retiro en local",
+  "fechaVenta": "2026-10-23T15:30:00Z",
+  "itemsId": [1234567, 7654321],
+  "itemsCant": [2, 1]
+}
+```
+
+- `itemsId` son los **ids públicos** de los productos.
+- `itemsId` e `itemsCant` deben tener la misma longitud.
+- El cliente debe existir; los productos deben existir, estar activos y tener stock.
+- La venta se registra y el stock se descuenta automáticamente.
+
+## Comportamiento transversal
+
+- **Rate limiting**: 100 peticiones por minuto por IP; excedido devuelve `429`.
+- **CORS**: orígenes definidos en `ACCEPTED_ORIGINS`.
+- **Seguridad**: HSTS en producción y cabeceras `X-Content-Type-Options`,
+  `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`,
+  `Content-Security-Policy` y `X-Robots-Tag`.
+- **Errores**: `404` en JSON (`{ "message": "Recurso no encontrado" }`) y
+  `ProblemDetails` para excepciones no controladas en producción.
+- **Validaciones**: DataAnnotations en los DTOs + validadores de negocio
+  (documento/correo únicos, categoría existente, stock mínimo/máximo, fecha no futura,
+  stock suficiente, etc.).
+- **Inyección de dependencias**: repositorio genérico, servicios, validadores,
+  `TimeProvider` y `IGeneradorCodigos`.
+
+## Tests
 
 [![Tests](https://github.com/NicoPasino/Sistema-Ventas-API/actions/workflows/tests.yml/badge.svg)](https://github.com/NicoPasino/Sistema-Ventas-API/actions/workflows/tests.yml)
 
-### Qué se cubre
+La suite vive en `NicoPasino.Tests` y corre sin base de datos ni servidor externo:
 
-**725 tests** (aprobados), organizados por carpeta:
+- **xUnit** como runner, **FluentAssertions** para aserciones.
+- **NSubstitute** para simular los servicios en los tests de controllers.
+- **EF Core InMemory** para probar el repositorio real.
+- **WebApplicationFactory** para verificar el routing (por ejemplo, los `405`).
+
+**732 tests aprobados** y una cobertura de **99.85 % de líneas** y **99.37 % de ramas**
+(proyectos `Core`, `Servicios` e `Infra`; migraciones excluidas).
 
 | Carpeta | Cobertura |
 |---|---|
-| `Servicios` | `ProductoServicio`, `ClienteServicio`, `VentaServicio` y `CategoriaServicio`: lectura, create, update, patch, enable, validaciones y guardas de null |
-| `Mapper` | Los 5 mapeos de `MappingConfig.VentasMappings` (`Producto↔ProductoDto`, `Venta→VentaDto`, `Venta→VentaDetalleDto`, `Ventaporproducto→VentaporproductoDto`, `Cliente→ClienteDto`) y los riesgos de navegación sin `Include` |
-| `Validadores` | `ProductoValidador`, `ClienteValidador`, `VentaValidador` (incluida la rama async con categoría/producto inexistentes) y `DataAnnotationsDtoTests` (reglas y mensajes de los DTOs) |
-| `Controllers` | Endpoints de `VentasController` (`.Ventas.Clientes`, `.Ventas.Productos` y `.Ventas.Ventas`): rutas GET, search, POST, PUT y PATCH; `Endpoints405Tests` verifica que `DELETE` responde 405 vía `WebApplicationFactory` |
-| `Infraestructura` | `RepositorioGenericoVentas<T>` real sobre EF InMemory (los 8 métodos) y `RepositorioGenericoVentasFake<T>` |
+| `Servicios` | Lectura, creación, actualización, patch, enable, validaciones y guardas de null de los cuatro servicios. |
+| `Validadores` | `ProductoValidador`, `ClienteValidador`, `VentaValidador` y reglas de DataAnnotations de los DTOs. |
+| `Mapper` | Los cinco mapeos de `MappingConfig` y riesgos de navegación sin `Include`. |
+| `Controllers` | Rutas GET, search, POST, PUT y PATCH de `VentasController`, más los `405` de `DELETE`. |
+| `Infraestructura` | `RepositorioGenericoVentas<T>` sobre EF InMemory y el fake de repositorio. |
 
-<!-- Cada carpeta usa un patrón distinto a propósito: los servicios se prueban contra el
-fake que **registra** responsabilidades de cada repositorio y de verdad evalúa el
-`Expression<Func<T, bool>>` de los filtros; los controllers se arman con un
-`VentasControllerHarness` (NSubstitute para los 4 `IServicioGenerico`, instancias
-reales de `ProductoServicio`/`ClienteServicio` para los PATCH); el repositorio real
-se ejercita con InMemory, y los 405 se comprueban levantando la API real con
-`WebApplicationFactory`. -->
+Además hay **tests de caracterización** que fijan el comportamiento actual de bugs
+conocidos (referenciados en `Common/BugsConocidos.cs`) para que, al corregirlos, la
+suite señale exactamente qué cambió.
 
 ```bash
-# Correr toda la suite
+# Toda la suite
 dotnet test
 
-# Con reporte de cobertura (formato cobertura, en XML)
+# Con cobertura (XML cobertura en TestResults/)
 dotnet test --settings .runsettings --collect:"XPlat Code Coverage"
 
 # Filtrar por nombre
 dotnet test --filter "FullyQualifiedName~ProductoValidador"
 ```
 
-<!-- El reporte HTML de cobertura se genera con `reportgenerator` sobre el XML de coverlet.
+El workflow `.github/workflows/tests.yml` restaura, compila y ejecuta la suite en
+Release con cobertura en cada push y pull request.
 
-### Qué NO se cubre y por qué
+## Estructura del repositorio
 
-- **Integración HTTP** (levantar `Kestrel` y pegarle con un cliente real): los DTOs
-  internos de las rutas se formatean con objetos anónimos y requiere levantar
-  `Program.Main`, que lee `Environment.GetEnvironmentVariable("ventas")` y sin esa
-  variable explota en `UseMySql(null, …)`.
-- **Base de datos real (MySQL)**: las pruebas del repositorio usan el proveedor
-  InMemory de EF Core; no hay MySQL en CI.
-- **Migraciones**: no se ejercitan (`CreateDatabase`/`Migrate` quedan fuera).
+```text
+├── NicoPasino/                      # Host web
+│   ├── Controllers/
+│   │   ├── VentasController.cs      # Ruta base, DI y rate limiting
+│   │   ├── Ventas.Productos.cs      # Productos + Categorías
+│   │   ├── Ventas.Clientes.cs       # Clientes
+│   │   └── Ventas.Ventas.cs         # Ventas
+│   ├── Program.cs                   # Arranque, DI, CORS, seguridad y middleware
+│   ├── .env.example                 # Variables de entorno de ejemplo
+│   └── appsettings.json
+│
+├── NicoPasino.Core/                 # Núcleo
+│   ├── DTO/Ventas/                  # ProductoDto, ClienteDto, VentaDto, Patch DTOs…
+│   ├── Errores/                     # DataException, UpdateException
+│   ├── Interfaces/                  # IServicioGenerico, IRepositorioGenericoVentas…
+│   ├── Mapper/MappingConfig.cs      # Configuración de Mapster
+│   └── Modelos/Ventas/              # Producto, Cliente, Venta, Categoria, Ventaporproducto
+│
+├── NicoPasino.Infra/                # Infraestructura
+│   ├── Data/ventasdbContext.cs
+│   ├── Migrations/
+│   └── Repositorio/RepositorioGenericoVentas.cs
+│
+├── NicoPasino.Servicios/            # Lógica de negocio
+│   ├── Servicios/Ventas/            # Producto, Cliente, Venta y Categoria
+│   ├── Servicios/GeneradorCodigos.cs
+│   └── Validaciones/                # ProductoValidador, ClienteValidador, VentaValidador
+│
+├── NicoPasino.Tests/                # Tests
+│   ├── Common/                      # Builders, fakes, harness, BugsConocidos
+│   ├── Controllers/
+│   ├── Infraestructura/
+│   ├── Mapper/
+│   ├── Servicios/
+│   └── Validadores/
+│
+├── .github/workflows/tests.yml      # CI: build + tests + cobertura
+├── .runsettings                     # Configuración de cobertura
+├── dotnet-tools.json                # dotnet-ef local
+└── SistemaVentas.sln
+```
 
-### Bugs conocidos documentados con tests
+## Autor
 
-Una parte de la suite son **tests de caracterización**: fijan el comportamiento
-actual aunque sea erróneo y lo marcan como `// BUG: ver issue #N`, referenciando
-`Common/BugsConocidos.cs`. Sirven de red de seguridad antes de corregir.
+Nicolás Pasino — nico_pasino@hotmail.com
 
-### Cómo escribir un test
-
-| Qué necesitás | Usá |
-|---|---|
-| Una entidad válida de arranque | `Common/Builders/EntidadesTestBuilder.cs` (`ProductoBuilder`, `ClienteBuilder`, …) |
-| Un DTO de entrada válido | `Common/Builders/DtoTestBuilder.cs` |
-| Reemplazar `IRepositorioGenericoVentas<T>` | `Common/Fakes/RepositorioGenericoVentasFake.cs` |
-
-El fake registra las llamadas (`VecesUpdate`, `UltimaEntidadActualizada`, `UltimoOrden`,
-…) para poder afirmar *qué* le pidió el servicio al repositorio, y evalúa de verdad el
-`Expression<Func<T, bool>>` de los filtros.
-
-`MappingConfig.VentasMappings()` se carga una sola vez por ensamblado desde
-`Common/InicializadorMapster.cs`, porque `TypeAdapterConfig` es estado estático global
-y en producción se inicializa en `Program.Main`. -->
-
-## 🧑‍💻 Autor:
-Nicolás Pasino - nico_pasino@hotmail.com
-
-[LinkedIn](https://www.linkedin.com/in/nicolas-pasino/) | [Portfolio](https://nicopasino.space)
+[LinkedIn](https://www.linkedin.com/in/nicolas-pasino/) · [Portfolio](https://nicopasino.space)
